@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Wallet, TrendingUp, Calendar, Plus, X, Check, ArrowRight, Coffee, ShoppingBag, Car, Home, Heart, Sparkles, MoreHorizontal, ChevronRight, ChevronLeft, Tag, CalendarDays, TrendingDown, LogOut, Cloud, CloudOff, Loader } from 'lucide-react';
+import { Wallet, TrendingUp, Calendar, Plus, X, Check, ArrowRight, Coffee, ShoppingBag, Car, Home, Heart, Sparkles, MoreHorizontal, ChevronRight, ChevronLeft, Tag, CalendarDays, TrendingDown, LogOut, Cloud, CloudOff, Loader, Activity } from 'lucide-react';
 import { supabase } from './supabase';
 import Auth from './Auth';
+import InvestmentPage from './Investment';
 
 const STORAGE_KEY = 'budget_app_data_v1';
 
@@ -39,6 +40,13 @@ export default function App() {
   const [showHistoryAddModal, setShowHistoryAddModal] = useState(false);
   const [historyAddDate, setHistoryAddDate] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null); // { title, message, onConfirm }
+  
+  // Investment / yatırım sayfası
+  const [showInvestment, setShowInvestment] = useState(false);
+  const [investmentGoals, setInvestmentGoals] = useState([]); // [{ id, name, target, current, period }]
+  const [transactions, setTransactions] = useState([]); // [{ id, type, assetId, amount, price, date }]
+  const [watchedAssets, setWatchedAssets] = useState([]); // kullanıcının eklediği custom coinler
+  const [portfolioSnapshots, setPortfolioSnapshots] = useState([]); // [{ date, value, cost }]
   
   // Expense form
   const [expenseAmount, setExpenseAmount] = useState('');
@@ -81,6 +89,10 @@ export default function App() {
         setExpenses([]);
         setCarryOver(0);
         setDayHistory({});
+        setInvestmentGoals([]);
+        setTransactions([]);
+        setWatchedAssets([]);
+        setPortfolioSnapshots([]);
         setStep('setup');
         setHasLoaded(false);
       }
@@ -138,9 +150,64 @@ export default function App() {
           if (dataToLoad.investmentMode) setInvestmentMode(dataToLoad.investmentMode);
           if (dataToLoad.dayHistory) setDayHistory(dataToLoad.dayHistory);
           if (dataToLoad.carryOver) setCarryOver(dataToLoad.carryOver);
-          if (dataToLoad.todayExpenses && dataToLoad.todayExpensesDate === todayKey) {
-            setTodayExpenses(dataToLoad.todayExpenses);
+          if (dataToLoad.investmentGoals) setInvestmentGoals(dataToLoad.investmentGoals);
+          if (dataToLoad.transactions) setTransactions(dataToLoad.transactions);
+          if (dataToLoad.watchedAssets) setWatchedAssets(dataToLoad.watchedAssets);
+          if (dataToLoad.portfolioSnapshots) setPortfolioSnapshots(dataToLoad.portfolioSnapshots);
+          
+          // OTOMATİK GÜN GEÇİŞİ: todayExpensesDate dünden veya daha eskiyse, o günü kapat
+          if (dataToLoad.todayExpenses && dataToLoad.todayExpensesDate) {
+            if (dataToLoad.todayExpensesDate === todayKey) {
+              // Aynı gün, normal devam
+              setTodayExpenses(dataToLoad.todayExpenses);
+            } else if (dataToLoad.todayExpenses.length > 0) {
+              // Farklı (önceki) gün — otomatik kapatma
+              const oldDate = dataToLoad.todayExpensesDate;
+              const oldExpenses = dataToLoad.todayExpenses;
+              const oldSpent = oldExpenses.reduce((sum, e) => sum + e.amount, 0);
+              
+              // O günün dailyLimit'ini hesaplamak zor (geriye dönük) — basitçe son bilinen limit kullanılır
+              // Daha iyisi: dataLoad'daki dailyLimit'i sakla. Şimdilik basit yaklaşım:
+              const sNum = parseFloat(dataToLoad.salary) || 0;
+              let invAmt = 0;
+              if (dataToLoad.investmentEnabled) {
+                if (dataToLoad.investmentMode === 'percent') invAmt = sNum * ((dataToLoad.investmentPercent || 15) / 100);
+                else invAmt = parseFloat(dataToLoad.investmentAmount) || 0;
+              }
+              const oldDateObj = new Date(oldDate);
+              const lastDayOldMonth = new Date(oldDateObj.getFullYear(), oldDateObj.getMonth() + 1, 0).getDate();
+              const sDay = parseInt(dataToLoad.salaryDay);
+              let estimatedDays = lastDayOldMonth - oldDateObj.getDate() + 1;
+              if (!isNaN(sDay) && sDay >= 1 && sDay <= 31) {
+                if (oldDateObj.getDate() < sDay) estimatedDays = sDay - oldDateObj.getDate();
+                else estimatedDays = (lastDayOldMonth - oldDateObj.getDate()) + Math.min(sDay, lastDayOldMonth);
+                if (estimatedDays < 1) estimatedDays = 1;
+              }
+              const estimatedBudget = (sNum - invAmt) / estimatedDays;
+              const oldRemaining = estimatedBudget - oldSpent;
+              
+              const closedEntry = {
+                date: oldDate,
+                budget: estimatedBudget,
+                spent: oldSpent,
+                remaining: oldRemaining,
+                expenses: oldExpenses,
+                autoClosed: true
+              };
+              
+              const newDayHistory = { ...(dataToLoad.dayHistory || {}), [oldDate]: closedEntry };
+              setDayHistory(newDayHistory);
+              setTodayExpenses([]); // bugüne sıfır harcamayla başla
+              
+              // Bilanço modal'ını otomatik göster
+              setDaySummary({ ...closedEntry, day: oldDate, autoClosed: true });
+              setShowSummaryModal(true);
+            } else {
+              // Farklı gün ama harcama yoktu, sadece sıfırla
+              setTodayExpenses([]);
+            }
           }
+          
           if (dataToLoad.salary && dataToLoad.setupComplete) {
             setStep('dashboard');
           }
@@ -174,7 +241,11 @@ export default function App() {
       carryOver,
       todayExpenses,
       todayExpensesDate: todayKey,
-      setupComplete: step === 'dashboard'
+      setupComplete: step === 'dashboard',
+      investmentGoals,
+      transactions,
+      watchedAssets,
+      portfolioSnapshots
     };
     
     const dataStr = JSON.stringify(data);
@@ -212,7 +283,7 @@ export default function App() {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [salary, salaryDay, investmentEnabled, investmentPercent, investmentAmount, investmentMode, dayHistory, carryOver, todayExpenses, step, hasLoaded, todayKey, session]);
+  }, [salary, salaryDay, investmentEnabled, investmentPercent, investmentAmount, investmentMode, dayHistory, carryOver, todayExpenses, step, hasLoaded, todayKey, session, investmentGoals, transactions, watchedAssets, portfolioSnapshots]);
 
   // Çıkış yap
   const handleLogout = async () => {
@@ -223,7 +294,8 @@ export default function App() {
         const data = {
           salary, salaryDay, investmentEnabled, investmentPercent, investmentAmount,
           investmentMode, dayHistory, carryOver, todayExpenses, todayExpensesDate: todayKey,
-          setupComplete: step === 'dashboard'
+          setupComplete: step === 'dashboard', investmentGoals,
+          transactions, watchedAssets, portfolioSnapshots
         };
         await supabase.from('user_data').upsert({ 
           user_id: session.user.id, data, updated_at: new Date().toISOString()
@@ -454,6 +526,10 @@ export default function App() {
         setExpenses([]);
         setCarryOver(0);
         setDayHistory({});
+        setInvestmentGoals([]);
+        setTransactions([]);
+        setWatchedAssets([]);
+        setPortfolioSnapshots([]);
         setStep('setup');
         setShowCalendar(false);
         setSelectedDate(null);
@@ -932,6 +1008,24 @@ export default function App() {
   const progressPercent = todayBudget > 0 ? Math.min((todayTotal / todayBudget) * 100, 100) : 0;
   const isOverBudget = todayTotal > todayBudget;
 
+  // Yatırım sayfası gösteriliyorsa onu render et
+  if (showInvestment) {
+    return (
+      <InvestmentPage 
+        onClose={() => setShowInvestment(false)}
+        investmentGoals={investmentGoals}
+        onUpdateGoals={setInvestmentGoals}
+        transactions={transactions}
+        onUpdateTransactions={setTransactions}
+        watchedAssets={watchedAssets}
+        onUpdateWatchedAssets={setWatchedAssets}
+        portfolioSnapshots={portfolioSnapshots}
+        onUpdateSnapshots={setPortfolioSnapshots}
+        monthlyInvestmentBudget={calculations.invAmount}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen w-full" style={{
       fontFamily: "'Fraunces', Georgia, serif",
@@ -1005,12 +1099,28 @@ export default function App() {
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <button 
+              onClick={() => setShowInvestment(true)}
+              className="ui-font text-xs flex items-center gap-2 px-3 py-2 transition-all"
+              style={{
+                border: '1px solid #2C2416',
+                background: 'transparent',
+                color: '#2C2416',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                fontWeight: 500
+              }}
+              title="Yatırım Terminali"
+            >
+              <Activity size={14} />
+              <span className="hidden sm:inline">Yatırım</span>
+            </button>
+            <button 
               onClick={() => {
                 setCalendarMonth(new Date().getMonth());
                 setCalendarYear(new Date().getFullYear());
                 setShowCalendar(true);
               }}
-              className="ui-font text-xs flex items-center gap-2 px-4 py-2 transition-all hover:bg-[#2C2416] hover:text-[#F5EFE6]"
+              className="ui-font text-xs flex items-center gap-2 px-3 py-2 transition-all hover:bg-[#2C2416] hover:text-[#F5EFE6]"
               style={{
                 border: '1px solid #2C2416',
                 background: '#2C2416',
@@ -1026,7 +1136,7 @@ export default function App() {
             </button>
             <button 
               onClick={() => setStep('setup')}
-              className="ui-font text-xs px-4 py-2 transition-all"
+              className="ui-font text-xs px-3 py-2 transition-all"
               style={{
                 border: '1px solid #2C2416',
                 letterSpacing: '0.1em',
@@ -1157,11 +1267,12 @@ export default function App() {
             </div>
           ) : (
             <div className="space-y-2">
-              {todayExpenses.slice().reverse().map((exp, idx) => {
+              {todayExpenses.slice().reverse().map((exp, revIdx) => {
                 const cat = getCategoryInfo(exp.category);
                 const Icon = cat.icon;
+                const realIdx = todayExpenses.length - 1 - revIdx; // gerçek index
                 return (
-                  <div key={idx} className="slide-up flex items-center gap-4 p-4" style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid #E8DDC9' }}>
+                  <div key={realIdx} className="slide-up flex items-center gap-3 p-4" style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid #E8DDC9' }}>
                     <div className="w-10 h-10 flex items-center justify-center flex-shrink-0" style={{ background: cat.color, color: '#F5EFE6' }}>
                       <Icon size={18} />
                     </div>
@@ -1183,6 +1294,23 @@ export default function App() {
                         {exp.time}
                       </div>
                     </div>
+                    <button
+                      onClick={() => {
+                        setConfirmDialog({
+                          title: 'Harcamayı sil',
+                          message: 'Bu harcama kalıcı olarak silinecek. Devam edilsin mi?',
+                          onConfirm: () => {
+                            setTodayExpenses(todayExpenses.filter((_, i) => i !== realIdx));
+                            setConfirmDialog(null);
+                          }
+                        });
+                      }}
+                      className="w-7 h-7 flex items-center justify-center transition-all flex-shrink-0"
+                      style={{ border: '1px solid #C97B5C', color: '#A85751' }}
+                      title="Sil"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
                 );
               })}
@@ -2030,8 +2158,16 @@ export default function App() {
             {/* Header dark */}
             <div className="p-7 md:p-9" style={{ background: '#2C2416', color: '#F5EFE6' }}>
               <div className="ui-font text-xs mb-2" style={{ letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.6 }}>
-                {todayFormatted.full} — Bilanço
+                {daySummary.autoClosed && daySummary.date 
+                  ? `${formatDate(new Date(daySummary.date)).full} — Otomatik Kapatıldı`
+                  : `${todayFormatted.full} — Bilanço`
+                }
               </div>
+              {daySummary.autoClosed && (
+                <div className="ui-font text-xs mb-3" style={{ opacity: 0.5, fontStyle: 'italic' }}>
+                  Saat 00:00 geçtiği için sistem önceki günü otomatik kapattı.
+                </div>
+              )}
               <div className="text-4xl mb-1" style={{ fontWeight: 300 }}>
                 {daySummary.remaining >= 0 ? <span><em style={{ fontWeight: 400, color: '#A8D08D' }}>Tasarruf</em> ettin.</span> : <span><em style={{ fontWeight: 400, color: '#E89B7F' }}>Limit</em> aşıldı.</span>}
               </div>
@@ -2112,35 +2248,58 @@ export default function App() {
               </div>
 
               <div className="flex gap-3">
-                <button
-                  onClick={() => setShowSummaryModal(false)}
-                  className="flex-1 ui-font py-4 transition-all"
-                  style={{
-                    background: 'transparent',
-                    border: '1px solid #2C2416',
-                    color: '#2C2416',
-                    letterSpacing: '0.15em',
-                    textTransform: 'uppercase',
-                    fontSize: '11px',
-                    fontWeight: 500
-                  }}
-                >
-                  Geri
-                </button>
-                <button
-                  onClick={confirmEndDay}
-                  className="flex-1 ui-font py-4 transition-all"
-                  style={{
-                    background: '#2C2416',
-                    color: '#F5EFE6',
-                    letterSpacing: '0.15em',
-                    textTransform: 'uppercase',
-                    fontSize: '11px',
-                    fontWeight: 500
-                  }}
-                >
-                  Onayla & Sonraki Gün
-                </button>
+                {daySummary.autoClosed ? (
+                  // Otomatik kapatılmışsa zaten geçildi, sadece "Tamam" göster
+                  <button
+                    onClick={() => {
+                      setShowSummaryModal(false);
+                      setDaySummary(null);
+                    }}
+                    className="flex-1 ui-font py-4 transition-all"
+                    style={{
+                      background: '#2C2416',
+                      color: '#F5EFE6',
+                      letterSpacing: '0.15em',
+                      textTransform: 'uppercase',
+                      fontSize: '11px',
+                      fontWeight: 500
+                    }}
+                  >
+                    Yeni Güne Başla
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setShowSummaryModal(false)}
+                      className="flex-1 ui-font py-4 transition-all"
+                      style={{
+                        background: 'transparent',
+                        border: '1px solid #2C2416',
+                        color: '#2C2416',
+                        letterSpacing: '0.15em',
+                        textTransform: 'uppercase',
+                        fontSize: '11px',
+                        fontWeight: 500
+                      }}
+                    >
+                      Geri
+                    </button>
+                    <button
+                      onClick={confirmEndDay}
+                      className="flex-1 ui-font py-4 transition-all"
+                      style={{
+                        background: '#2C2416',
+                        color: '#F5EFE6',
+                        letterSpacing: '0.15em',
+                        textTransform: 'uppercase',
+                        fontSize: '11px',
+                        fontWeight: 500
+                      }}
+                    >
+                      Onayla & Sonraki Gün
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
