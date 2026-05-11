@@ -79,27 +79,92 @@ export default function InvestmentPage({
   const fetchPrices = async () => {
     setPricesLoading(true);
     setPricesError(null);
+    const errors = [];
     try {
       const newPrices = {};
-      try {
-        const fxRes = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=TRY,EUR,GBP');
-        const fxData = await fxRes.json();
-        if (fxData.rates) {
-          newPrices.usd = { try: fxData.rates.TRY, change: 0 };
-          newPrices.eur = { try: fxData.rates.TRY / fxData.rates.EUR, change: 0 };
-          newPrices.gbp = { try: fxData.rates.TRY / fxData.rates.GBP, change: 0 };
-        }
-      } catch (e) { console.error('FX:', e); }
       
+      // --- DÖVİZ (Frankfurter API) ---
+      try {
+        // Bugünkü ve önceki günün kurlarını al (24s değişim hesabı için)
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        
+        const [fxRes, fxYesterdayRes] = await Promise.all([
+          fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=TRY,EUR,GBP'),
+          fetch(`https://api.frankfurter.dev/v1/${yesterdayStr}?base=USD&symbols=TRY,EUR,GBP`)
+        ]);
+        
+        if (!fxRes.ok) throw new Error(`Frankfurter HTTP ${fxRes.status}`);
+        const fxData = await fxRes.json();
+        
+        let fxYesterdayData = null;
+        if (fxYesterdayRes.ok) {
+          fxYesterdayData = await fxYesterdayRes.json();
+        }
+        
+        if (fxData.rates) {
+          const usdTry = fxData.rates.TRY;
+          const eurTry = fxData.rates.TRY / fxData.rates.EUR;
+          const gbpTry = fxData.rates.TRY / fxData.rates.GBP;
+          
+          let usdChange = 0, eurChange = 0, gbpChange = 0;
+          if (fxYesterdayData?.rates) {
+            const prevUsdTry = fxYesterdayData.rates.TRY;
+            const prevEurTry = fxYesterdayData.rates.TRY / fxYesterdayData.rates.EUR;
+            const prevGbpTry = fxYesterdayData.rates.TRY / fxYesterdayData.rates.GBP;
+            if (prevUsdTry > 0) usdChange = ((usdTry - prevUsdTry) / prevUsdTry) * 100;
+            if (prevEurTry > 0) eurChange = ((eurTry - prevEurTry) / prevEurTry) * 100;
+            if (prevGbpTry > 0) gbpChange = ((gbpTry - prevGbpTry) / prevGbpTry) * 100;
+          }
+          
+          newPrices.usd = { try: usdTry, change: usdChange };
+          newPrices.eur = { try: eurTry, change: eurChange };
+          newPrices.gbp = { try: gbpTry, change: gbpChange };
+        }
+      } catch (e) {
+        console.error('FX hatası:', e);
+        errors.push('Döviz');
+      }
+      
+      // --- KRİPTO & ALTIN (CoinGecko API) ---
       const cryptoIds = allAssets.filter(a => a.type === 'crypto' && a.cgId).map(a => a.cgId);
       cryptoIds.push('tether-gold');
       const uniqueIds = [...new Set(cryptoIds)].join(',');
       
-      try {
+      const fetchCoinGecko = async (retryCount = 0) => {
         const cryptoRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${uniqueIds}&vs_currencies=try,usd&include_24hr_change=true`);
+        
+        if (cryptoRes.status === 429) {
+          // Rate limit — bir kez daha dene, 5 saniye bekleyerek
+          if (retryCount < 1) {
+            console.warn('CoinGecko rate limit, 5sn sonra tekrar deneniyor...');
+            await new Promise(r => setTimeout(r, 5000));
+            return fetchCoinGecko(retryCount + 1);
+          }
+          throw new Error('CoinGecko rate limit aşıldı');
+        }
+        
+        if (!cryptoRes.ok) throw new Error(`CoinGecko HTTP ${cryptoRes.status}`);
+        
         const cryptoData = await cryptoRes.json();
+        
+        // CoinGecko bazen rate limit'te error objesi döner
+        if (cryptoData.status?.error_code) {
+          throw new Error(cryptoData.status.error_message || 'CoinGecko API hatası');
+        }
+        
+        return cryptoData;
+      };
+      
+      try {
+        const cryptoData = await fetchCoinGecko();
+        
         if (cryptoData['tether-gold']) {
-          newPrices.gold = { try: cryptoData['tether-gold'].try / 31.1035, change: cryptoData['tether-gold'].try_24h_change || 0 };
+          newPrices.gold = { 
+            try: cryptoData['tether-gold'].try / 31.1035, 
+            change: cryptoData['tether-gold'].try_24h_change || 0 
+          };
         }
         allAssets.filter(a => a.type === 'crypto' && a.cgId).forEach(asset => {
           if (cryptoData[asset.cgId]) {
@@ -110,12 +175,25 @@ export default function InvestmentPage({
             };
           }
         });
-      } catch (e) { console.error('Crypto:', e); }
+      } catch (e) {
+        console.error('Kripto hatası:', e);
+        errors.push('Kripto/Altın');
+      }
       
-      setPrices(newPrices);
-      setLastUpdate(new Date());
+      // Kısmi başarı durumunda: en az bir veri geldiyse güncelle
+      if (Object.keys(newPrices).length > 0) {
+        setPrices(prev => ({ ...prev, ...newPrices }));
+        setLastUpdate(new Date());
+      }
+      
+      if (errors.length > 0 && Object.keys(newPrices).length === 0) {
+        setPricesError('Fiyatlar yüklenemedi. Lütfen internet bağlantınızı kontrol edin.');
+      } else if (errors.length > 0) {
+        setPricesError(`${errors.join(' ve ')} verileri alınamadı, diğerleri güncellendi.`);
+      }
     } catch (e) {
-      setPricesError('Fiyatlar yüklenemedi.');
+      console.error('Genel fiyat hatası:', e);
+      setPricesError('Fiyatlar yüklenemedi. Lütfen tekrar deneyin.');
     } finally {
       setPricesLoading(false);
     }
