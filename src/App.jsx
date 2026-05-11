@@ -907,9 +907,6 @@ const handleLogout = async () => {
             <button onClick={() => { setCalendarMonth(new Date().getMonth()); setCalendarYear(new Date().getFullYear()); setShowCalendar(true); }} aria-label="Takvim" className={`w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary ${showTutorial && tutorialStep === 3 ? 'tutorial-target-interactive' : ''}`}>
               <span className="material-symbols-outlined">event</span>
             </button>
-            <button onClick={() => setShowInvestment(true)} aria-label="Yatırım" className="hidden md:flex w-10 h-10 items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary" title="Yatırım Terminali">
-              <span className="material-symbols-outlined">trending_up</span>
-            </button>
             <button onClick={() => setStep('setup')} aria-label="Ayarlar" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary">
               <span className="material-symbols-outlined">settings</span>
             </button>
@@ -975,14 +972,24 @@ const handleLogout = async () => {
           </div>
         </section>
 
-        {calculations.hasSalaryDay && calculations.nextSalaryDate && (
-          <div className="bg-secondary-container rounded-xl p-4 text-on-secondary-container flex items-start gap-3">
-            <span className="material-symbols-outlined text-primary mt-0.5">info</span>
-            <span className="font-body-sm">
-              Bir sonraki maaş günün <strong>{formatDate(calculations.nextSalaryDate).short}</strong>. Günlük {formatCurrency(calculations.dailyLimit)} limitin var.
-            </span>
-          </div>
-        )}
+        <div className="flex flex-col md:flex-row items-stretch gap-3">
+          <button 
+            onClick={() => setShowInvestment(true)} 
+            className="hidden md:flex bg-surface-container-lowest text-primary hover:bg-surface-container-low transition-all rounded-xl px-5 items-center justify-center gap-2 shrink-0 border border-surface-variant shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[20px]">trending_up</span>
+            <span className="font-label-caps text-[12px] font-bold uppercase tracking-wider">Yatırım Menüsü</span>
+          </button>
+
+          {calculations.hasSalaryDay && calculations.nextSalaryDate && (
+            <div className="bg-secondary-container rounded-xl p-4 text-on-secondary-container flex items-center gap-3 flex-1">
+              <span className="material-symbols-outlined text-primary shrink-0 mt-0.5">info</span>
+              <span className="font-body-sm">
+                Bir sonraki maaş günün <strong>{formatDate(calculations.nextSalaryDate).short}</strong>. Günlük {formatCurrency(calculations.dailyLimit)} limitin var.
+              </span>
+            </div>
+          )}
+        </div>
 
         {/* Expenses List */}
         <section className="flex flex-col gap-4">
