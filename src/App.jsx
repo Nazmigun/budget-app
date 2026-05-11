@@ -1132,372 +1132,241 @@ const handleLogout = async () => {
         
         return (
           <div 
-            className="fade-in fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6"
-            style={{ background: 'rgba(44,36,22,0.7)' }}
+            className="fade-in fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8"
+            style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
             onClick={() => { setShowCalendar(false); setSelectedDate(null); }}
           >
+            {/* Close Button at the very top right, outside the main container */}
+            <button 
+              onClick={() => { setShowCalendar(false); setSelectedDate(null); }}
+              className="absolute top-6 right-6 w-10 h-10 bg-surface-container-lowest rounded-full flex items-center justify-center text-on-surface-variant shadow-lg hover:text-on-surface transition-colors z-[60]"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+
             <div 
-              className="scale-in w-full max-w-lg"
-              style={{ background: '#F8FAFC', maxHeight: '90vh', overflowY: 'auto' }}
+              className="scale-in w-full max-w-5xl flex flex-col lg:flex-row gap-6 relative"
+              style={{ maxHeight: '95vh' }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Header */}
-              <div className="p-6 md:p-7 flex items-center justify-between" style={{ background: '#0F172A', color: '#F8FAFC' }}>
-                <div>
-                  <div className="font-sans text-xs mb-1" style={{ letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.6 }}>
-                    Geçmiş
-                  </div>
-                  <div className="text-2xl" style={{ fontWeight: 400 }}>
-                    <em>{monthNames[calendarMonth]}</em> {calendarYear}
-                  </div>
-                </div>
-                <button
-                  onClick={() => { setShowCalendar(false); setSelectedDate(null); }}
-                  className="w-9 h-9 flex items-center justify-center"
-                  style={{ border: '1px solid #F8FAFC' }}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="p-6 md:p-7">
-                {/* Month nav */}
-                <div className="flex items-center justify-between mb-6">
-                  <button
-                    onClick={goPrevMonth}
-                    className="w-9 h-9 flex items-center justify-center transition-all"
-                    style={{ border: '1px solid #0F172A', color: '#0F172A' }}
-                  >
-                    <ChevronLeft size={16} />
+              
+              {/* LEFT COLUMN: Calendar */}
+              <div className="flex-[1.5] flex flex-col gap-4 overflow-hidden">
+                {/* Header: Dark nav */}
+                <div className="bg-[#2A322A] text-white rounded-2xl flex items-center justify-between px-6 py-5 shadow-sm">
+                  <button onClick={goPrevMonth} className="hover:text-primary-fixed transition-colors flex items-center">
+                    <span className="material-symbols-outlined">chevron_left</span>
                   </button>
-                  <div className="font-sans text-sm" style={{ color: '#64748B', fontWeight: 500 }}>
+                  <div className="text-xl font-display-tr font-medium tracking-wide">
                     {monthNames[calendarMonth]} {calendarYear}
                   </div>
-                  <button
-                    onClick={goNextMonth}
-                    className="w-9 h-9 flex items-center justify-center transition-all"
-                    style={{ border: '1px solid #0F172A', color: '#0F172A' }}
-                  >
-                    <ChevronRight size={16} />
+                  <button onClick={goNextMonth} className="hover:text-primary-fixed transition-colors flex items-center">
+                    <span className="material-symbols-outlined">chevron_right</span>
                   </button>
                 </div>
 
-                {/* Day labels */}
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                  {dayNamesShort.map(d => (
-                    <div key={d} className="font-sans text-xs text-center py-2" style={{ color: '#64748B', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>
-                      {d}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Calendar grid */}
-                <div className="grid grid-cols-7 gap-1 mb-6">
-                  {daysArray.map((day, idx) => {
-                    if (day === null) {
-                      return <div key={`empty-${idx}`}></div>;
-                    }
-                    const dateKey = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    const entry = dayHistory[dateKey];
-                    const isToday = dateKey === todayKey;
-                    const isSelected = dateKey === selectedDate;
-                    const hasData = !!entry;
-                    const isPositive = entry && entry.remaining >= 0;
-                    const isFuture = new Date(calendarYear, calendarMonth, day) > new Date();
-                    
-                    let bgColor = 'transparent';
-                    let textColor = '#0F172A';
-                    let borderColor = 'transparent';
-                    
-                    if (hasData) {
-                      bgColor = isPositive ? '#22C55E' : '#EF4444';
-                      textColor = '#0F172A';
-                    } else if (isFuture) {
-                      textColor = '#C9B89A';
-                    }
-                    
-                    if (isToday) {
-                      borderColor = '#0F172A';
-                    }
-                    if (isSelected) {
-                      borderColor = '#0F172A';
-                    }
-                    
-                    return (
-                      <button
-                        key={dateKey}
-                        onClick={() => {
-                          if (isFuture) return; // gelecek tıklanamaz
-                          setSelectedDate(isSelected ? null : dateKey);
-                        }}
-                        disabled={isFuture}
-                        className="aspect-square flex items-center justify-center font-mono-num text-sm transition-all relative"
-                        style={{
-                          background: bgColor,
-                          color: textColor,
-                          border: `2px solid ${borderColor}`,
-                          fontWeight: hasData ? 500 : 400,
-                          cursor: isFuture ? 'default' : 'pointer',
-                          opacity: isFuture ? 0.4 : 1
-                        }}
-                      >
-                        {day}
-                        {isToday && !hasData && (
-                          <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full" style={{ background: '#0F172A' }}></div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Legend */}
-                <div className="flex flex-wrap gap-3 mb-6 pb-6" style={{ borderBottom: '1px solid #E2E8F0' }}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3" style={{ background: '#22C55E' }}></div>
-                    <span className="font-sans text-xs" style={{ color: '#64748B' }}>Tasarruf</span>
+                {/* Calendar Grid Container */}
+                <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-surface-variant flex-1 flex flex-col overflow-y-auto">
+                  {/* Days Header */}
+                  <div className="grid grid-cols-7 gap-2 mb-3">
+                    {dayNamesShort.map(d => (
+                      <div key={d} className="text-[10px] text-center font-bold text-on-surface-variant tracking-widest">{d}</div>
+                    ))}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3" style={{ background: '#EF4444' }}></div>
-                    <span className="font-sans text-xs" style={{ color: '#64748B' }}>Aşım</span>
+                  
+                  {/* Grid */}
+                  <div className="grid grid-cols-7 gap-2 mb-6 flex-1">
+                     {daysArray.map((day, idx) => {
+                        if (day === null) {
+                          return <div key={`empty-${idx}`}></div>;
+                        }
+                        const dateKey = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const entry = dayHistory[dateKey];
+                        const isToday = dateKey === todayKey;
+                        const isSelected = dateKey === selectedDate;
+                        const hasData = !!entry;
+                        const isPositive = entry && entry.remaining >= 0;
+                        const isFuture = new Date(calendarYear, calendarMonth, day) > new Date();
+                        
+                        let bgColor = 'transparent';
+                        let textColor = 'var(--on-surface-variant)';
+                        let valueText = null;
+                        
+                        if (hasData) {
+                          bgColor = isPositive ? 'var(--secondary-container)' : 'var(--error-container)';
+                          textColor = 'var(--on-surface)';
+                          valueText = (isPositive ? '+' : '-') + formatCurrency(Math.abs(entry.remaining));
+                        }
+                        
+                        return (
+                          <button
+                            key={dateKey}
+                            onClick={() => {
+                              if (isFuture) return;
+                              setSelectedDate(isSelected ? null : dateKey);
+                            }}
+                            disabled={isFuture}
+                            className={`aspect-square rounded-xl p-2 flex flex-col justify-between transition-all relative border ${isSelected ? 'border-primary border-2 shadow-sm' : 'border-surface-variant/50 hover:border-outline-variant'}`}
+                            style={{
+                              background: bgColor,
+                              cursor: isFuture ? 'default' : 'pointer',
+                              opacity: isFuture ? 0.4 : 1
+                            }}
+                          >
+                            <span className="text-sm font-medium" style={{ color: textColor }}>{day}</span>
+                            {valueText && (
+                               <span className={`text-[10px] font-bold self-end ${isPositive ? 'text-primary' : 'text-error'}`}>
+                                 {valueText}
+                               </span>
+                            )}
+                            {isToday && (
+                              <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-primary"></div>
+                            )}
+                          </button>
+                        );
+                     })}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3" style={{ border: '2px solid #0F172A' }}></div>
-                    <span className="font-sans text-xs" style={{ color: '#64748B' }}>Bugün</span>
+                  
+                  {/* Legend */}
+                  <div className="flex gap-6 border-t border-surface-variant pt-5 mt-auto">
+                     <div className="flex items-center gap-2 text-sm text-on-surface-variant"><span className="w-3 h-3 rounded-full bg-secondary-container"></span> Tasarruf</div>
+                     <div className="flex items-center gap-2 text-sm text-on-surface-variant"><span className="w-3 h-3 rounded-full bg-error-container"></span> Aşım</div>
+                     <div className="flex items-center gap-2 text-sm text-on-surface-variant"><span className="w-3 h-3 rounded-full border-2 border-primary"></span> Bugün</div>
                   </div>
                 </div>
-
-                {/* Selected day detail OR month stats */}
-                {selectedDate ? (
-                  selectedEntry ? (
-                    <div className="scale-in">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="font-sans text-xs" style={{ color: '#64748B', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 500 }}>
-                          {formatDate(new Date(selectedDate)).full}
-                        </div>
-                        <button
-                          onClick={() => setSelectedDate(null)}
-                          className="font-sans text-xs underline"
-                          style={{ color: '#64748B' }}
-                        >
-                          kapat
-                        </button>
-                      </div>
-                      
-                      <div className="p-5 mb-4" style={{ 
-                        background: selectedEntry.remaining >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        borderLeft: `3px solid ${selectedEntry.remaining >= 0 ? '#22C55E' : '#EF4444'}`
-                      }}>
-                        <div className="font-sans text-xs mb-1" style={{ color: '#64748B' }}>
-                          {selectedEntry.remaining >= 0 ? 'Tasarruf' : 'Aşım'}
-                        </div>
-                        <div className="font-mono-num text-3xl" style={{ 
-                          fontWeight: 400,
-                          color: selectedEntry.remaining >= 0 ? '#22C55E' : '#A8554E'
-                        }}>
-                          {selectedEntry.remaining >= 0 ? '+' : ''}{formatCurrency(selectedEntry.remaining)}
-                        </div>
-                      </div>
-                      
-                      <div className="space-y-2 mb-5">
-                        <div className="flex justify-between items-baseline">
-                          <span className="font-sans text-sm" style={{ color: '#64748B' }}>Günlük limit</span>
-                          <span className="font-mono-num text-base">{formatCurrency(selectedEntry.budget)}</span>
-                        </div>
-                        <div className="flex justify-between items-baseline">
-                          <span className="font-sans text-sm" style={{ color: '#64748B' }}>Toplam harcama</span>
-                          <span className="font-mono-num text-base">−{formatCurrency(selectedEntry.spent)}</span>
-                        </div>
-                        <div className="flex justify-between items-baseline">
-                          <span className="font-sans text-sm" style={{ color: '#64748B' }}>İşlem sayısı</span>
-                          <span className="font-mono-num text-base">{selectedEntry.expenses.length}</span>
-                        </div>
-                      </div>
-                      
-                      {/* Harcama listesi (silinebilir/düzenlenebilir) */}
-                      {selectedEntry.expenses.length > 0 && (
-                        <div className="mb-5">
-                          <div className="font-sans text-xs mb-3" style={{ color: '#64748B', letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 500 }}>
-                            Harcamalar
-                          </div>
-                          <div className="space-y-2">
-                            {selectedEntry.expenses.map((exp, idx) => {
-                              const cat = getCategoryInfo(exp.category);
-                              const Icon = cat.icon;
-                              return (
-                                <div key={idx} className="flex items-center gap-3 p-3" style={{ background: '#FFFFFF', border: '1px solid #F8FAFC' }}>
-                                  <div className="w-8 h-8 flex items-center justify-center flex-shrink-0" style={{ background: cat.color, color: '#F8FAFC' }}>
-                                    <Icon size={14} />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="font-mono-num text-sm" style={{ fontWeight: 500 }}>
-                                      {cat.label}
-                                    </div>
-                                    {exp.note && (
-                                      <div className="font-sans text-xs truncate" style={{ color: '#64748B' }}>
-                                        {exp.note}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="font-mono-num text-sm flex-shrink-0" style={{ fontWeight: 500 }}>
-                                    −{formatCurrency(exp.amount)}
-                                  </div>
-                                  <div className="flex gap-1 flex-shrink-0">
-                                    <button
-                                      onClick={() => setEditingExpense({ dateKey: selectedDate, index: idx, ...exp })}
-                                      className="w-7 h-7 flex items-center justify-center transition-all"
-                                      style={{ border: '1px solid #64748B', color: '#64748B' }}
-                                      title="Düzenle"
-                                    >
-                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                                      </svg>
-                                    </button>
-                                    <button
-                                      onClick={() => deleteHistoryExpense(selectedDate, idx)}
-                                      className="w-7 h-7 flex items-center justify-center transition-all"
-                                      style={{ border: '1px solid #EF4444', color: '#EF4444' }}
-                                      title="Sil"
-                                    >
-                                      <X size={12} />
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Action buttons */}
-                      <div className="flex gap-2 mb-4">
-                        <button
-                          onClick={() => {
-                            setHistoryAddDate(selectedDate);
-                            setShowHistoryAddModal(true);
-                            setExpenseAmount('');
-                            setExpenseCategory('');
-                            setExpenseNote('');
-                          }}
-                          className="flex-1 font-sans py-3 transition-all flex items-center justify-center gap-2"
-                          style={{
-                            background: '#0F172A',
-                            color: '#F8FAFC',
-                            letterSpacing: '0.1em',
-                            textTransform: 'uppercase',
-                            fontSize: '11px',
-                            fontWeight: 500
-                          }}
-                        >
-                          <Plus size={12} />
-                          Harcama Ekle
-                        </button>
-                        <button
-                          onClick={() => deleteHistoryDay(selectedDate)}
-                          className="font-sans py-3 px-4 transition-all"
-                          style={{
-                            background: 'transparent',
-                            border: '1px solid #EF4444',
-                            color: '#EF4444',
-                            letterSpacing: '0.1em',
-                            textTransform: 'uppercase',
-                            fontSize: '11px',
-                            fontWeight: 500
-                          }}
-                        >
-                          Günü Sil
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Seçilen gün ama veri yok */
-                    <div className="scale-in">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="font-sans text-xs" style={{ color: '#64748B', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 500 }}>
-                          {formatDate(new Date(selectedDate)).full}
-                        </div>
-                        <button
-                          onClick={() => setSelectedDate(null)}
-                          className="font-sans text-xs underline"
-                          style={{ color: '#64748B' }}
-                        >
-                          kapat
-                        </button>
-                      </div>
-                      <div className="p-6 text-center mb-4" style={{ background: '#FFFFFF', border: '1px dashed #E2E8F0' }}>
-                        <div className="font-sans text-sm mb-2" style={{ color: '#64748B' }}>
-                          Bu güne ait kayıt yok
-                        </div>
-                        <div className="font-sans text-xs" style={{ color: '#64748B', lineHeight: 1.5 }}>
-                          Unuttuğun bir harcamayı geriye dönük olarak ekleyebilirsin
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setHistoryAddDate(selectedDate);
-                          setShowHistoryAddModal(true);
-                          setExpenseAmount('');
-                          setExpenseCategory('');
-                          setExpenseNote('');
-                        }}
-                        className="w-full font-sans py-3 transition-all flex items-center justify-center gap-2"
-                        style={{
-                          background: '#0F172A',
-                          color: '#F8FAFC',
-                          letterSpacing: '0.1em',
-                          textTransform: 'uppercase',
-                          fontSize: '11px',
-                          fontWeight: 500
-                        }}
-                      >
-                        <Plus size={12} />
-                        Harcama Ekle
-                      </button>
-                    </div>
-                  )
-                ) : (
-                  <div>
-                    <div className="font-sans text-xs mb-3" style={{ color: '#64748B', letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 500 }}>
-                      Bu Ay Özet
-                    </div>
-                    {monthHistory.length === 0 ? (
-                      <div className="text-center py-8 font-sans text-sm" style={{ color: '#64748B' }}>
-                        Bu ay için henüz veri yok.
-                        <div className="text-xs mt-1" style={{ color: '#A89678' }}>
-                          Gün sonunda "Günü Bitir" butonuna basınca takvime kayıt düşer.
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                          <div className="p-4" style={{ background: 'rgba(34, 197, 94, 0.1)' }}>
-                            <div className="flex items-center gap-2 mb-1">
-                              <TrendingUp size={12} style={{ color: '#22C55E' }} />
-                              <span className="font-sans text-xs" style={{ color: '#64748B' }}>Tasarruf</span>
-                            </div>
-                            <div className="font-mono-num text-lg" style={{ color: '#22C55E', fontWeight: 500 }}>
-                              {formatCurrency(totalSaved)}
-                            </div>
-                            <div className="font-sans text-xs mt-1" style={{ color: '#64748B' }}>{goodDays} gün</div>
-                          </div>
-                          <div className="p-4" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
-                            <div className="flex items-center gap-2 mb-1">
-                              <TrendingDown size={12} style={{ color: '#A8554E' }} />
-                              <span className="font-sans text-xs" style={{ color: '#64748B' }}>Aşım</span>
-                            </div>
-                            <div className="font-mono-num text-lg" style={{ color: '#A8554E', fontWeight: 500 }}>
-                              {formatCurrency(totalOver)}
-                            </div>
-                            <div className="font-sans text-xs mt-1" style={{ color: '#64748B' }}>{badDays} gün</div>
-                          </div>
-                        </div>
-                        <div className="font-sans text-xs text-center py-2" style={{ color: '#64748B', fontStyle: 'italic' }}>
-                          Detay için bir güne tıkla — verisiz günlere de geriye dönük harcama ekleyebilirsin
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
               </div>
+
+              {/* RIGHT COLUMN: Summary or Day Detail */}
+              <div className="flex-1 flex flex-col gap-4 h-full">
+                <div className="bg-surface-container-lowest rounded-2xl p-8 shadow-sm border border-surface-variant h-full flex flex-col overflow-y-auto">
+                  {!selectedDate ? (
+                     <>
+                        <h3 className="text-2xl font-display-tr font-bold text-on-surface mb-8">Bu Ay Özet</h3>
+                        
+                        <div className="bg-secondary-container rounded-xl p-5 flex items-center justify-between mb-4 border border-secondary-fixed">
+                           <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center">
+                                 <span className="material-symbols-outlined text-[20px]">savings</span>
+                              </div>
+                              <span className="font-medium text-on-surface">Toplam Tasarruf</span>
+                           </div>
+                           <div className="text-primary font-bold text-lg">₺{totalSaved.toLocaleString()}</div>
+                        </div>
+                        
+                        <div className="bg-error-container rounded-xl p-5 flex items-center justify-between mb-8 border border-tertiary-fixed">
+                           <div className="flex items-center gap-4">
+                              <div className="w-10 h-10 bg-error/10 text-error rounded-full flex items-center justify-center border border-error/20">
+                                 <span className="material-symbols-outlined text-[20px]">warning</span>
+                              </div>
+                              <span className="font-medium text-on-surface">Toplam Aşım</span>
+                           </div>
+                           <div className="text-error font-bold text-lg">₺{totalOver.toLocaleString()}</div>
+                        </div>
+                        
+                        <hr className="border-surface-variant mb-6"/>
+                        
+                        <div className="flex justify-between items-end mb-3">
+                           <span className="text-on-surface-variant font-medium">Net Bakiye</span>
+                           <span className="font-bold text-3xl font-numeric-lg text-on-surface">₺{(totalSaved - totalOver).toLocaleString()}</span>
+                        </div>
+                        
+                        {/* Progress Bar */}
+                        <div className="h-4 w-full rounded-full bg-surface-variant flex overflow-hidden">
+                           {(() => {
+                              const total = totalSaved + totalOver;
+                              if (total === 0) return null;
+                              const greenPct = (totalSaved / total) * 100;
+                              const redPct = (totalOver / total) * 100;
+                              return (
+                                <>
+                                  <div style={{ width: `${greenPct}%` }} className="bg-primary h-full"></div>
+                                  <div style={{ width: `${redPct}%` }} className="bg-error h-full"></div>
+                                </>
+                              )
+                           })()}
+                        </div>
+                     </>
+                  ) : (
+                     /* Day Details */
+                     selectedEntry ? (
+                        <div className="flex flex-col h-full animate-fade-in">
+                           <div className="font-sans text-xs mb-1 text-primary tracking-widest uppercase font-bold">
+                              {formatDate(new Date(selectedDate)).full}
+                           </div>
+                           <h3 className="text-2xl font-display-tr font-bold text-on-surface mb-6">Günlük Özet</h3>
+                           
+                           <div className={`rounded-xl p-5 mb-6 border ${selectedEntry.remaining >= 0 ? 'bg-secondary-container border-secondary-fixed' : 'bg-error-container border-tertiary-fixed'}`}>
+                              <div className="font-medium text-on-surface mb-1">
+                                 {selectedEntry.remaining >= 0 ? 'Tasarruf Edilen' : 'Aşılan Tutar'}
+                              </div>
+                              <div className={`text-3xl font-bold ${selectedEntry.remaining >= 0 ? 'text-primary' : 'text-error'}`}>
+                                 {selectedEntry.remaining >= 0 ? '+' : ''}{formatCurrency(selectedEntry.remaining)}
+                              </div>
+                           </div>
+                           
+                           <div className="space-y-3 mb-8 bg-surface-container rounded-xl p-5 border border-surface-variant">
+                              <div className="flex justify-between items-baseline">
+                                 <span className="text-sm text-on-surface-variant">Günlük Limit</span>
+                                 <span className="font-medium">{formatCurrency(selectedEntry.budget)}</span>
+                              </div>
+                              <div className="flex justify-between items-baseline">
+                                 <span className="text-sm text-on-surface-variant">Harcama</span>
+                                 <span className="font-medium">−{formatCurrency(selectedEntry.spent)}</span>
+                              </div>
+                           </div>
+                           
+                           {selectedEntry.expenses.length > 0 && (
+                              <div className="flex-1 overflow-y-auto mb-6 pr-2">
+                                 <div className="text-xs tracking-widest text-on-surface-variant uppercase mb-4 font-bold">Harcamalar</div>
+                                 <div className="space-y-3">
+                                    {selectedEntry.expenses.map((exp, idx) => {
+                                       const cat = getCategoryInfo(exp.category);
+                                       return (
+                                          <div key={idx} className="flex items-center gap-3 p-3 rounded-lg border border-surface-variant bg-surface-container-low">
+                                             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: cat.color }}>
+                                                <span className="material-symbols-outlined text-white text-[18px]">{cat.icon === 'Coffee' ? 'local_cafe' : cat.icon === 'ShoppingBag' ? 'shopping_bag' : cat.icon === 'Car' ? 'directions_car' : cat.icon === 'Home' ? 'home' : cat.icon === 'Heart' ? 'favorite' : cat.icon === 'Sparkles' ? 'auto_awesome' : 'more_horiz'}</span>
+                                             </div>
+                                             <div className="flex-1 min-w-0">
+                                                <div className="font-medium text-on-surface">{cat.label}</div>
+                                                {exp.note && <div className="text-xs text-on-surface-variant truncate">{exp.note}</div>}
+                                             </div>
+                                             <div className="font-bold">−{formatCurrency(exp.amount)}</div>
+                                             <div className="flex gap-1">
+                                                <button onClick={() => setEditingExpense({ dateKey: selectedDate, index: idx, ...exp })} className="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors"><span className="material-symbols-outlined text-[16px]">edit</span></button>
+                                                <button onClick={() => deleteHistoryExpense(selectedDate, idx)} className="w-8 h-8 rounded-full flex items-center justify-center text-error hover:bg-error/10 transition-colors"><span className="material-symbols-outlined text-[16px]">delete</span></button>
+                                             </div>
+                                          </div>
+                                       );
+                                    })}
+                                 </div>
+                              </div>
+                           )}
+                           
+                           <div className="flex gap-3 mt-auto pt-4 border-t border-surface-variant">
+                              <button onClick={() => { setHistoryAddDate(selectedDate); setShowHistoryAddModal(true); }} className="flex-1 bg-surface-dim text-on-surface py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-surface-variant transition-colors">
+                                 <span className="material-symbols-outlined text-[18px]">add</span> Ekle
+                              </button>
+                              <button onClick={() => deleteHistoryDay(selectedDate)} className="px-4 py-3 border border-error text-error rounded-xl font-bold hover:bg-error/10 transition-colors">
+                                 Günü Sil
+                              </button>
+                           </div>
+                        </div>
+                     ) : (
+                        <div className="flex flex-col h-full animate-fade-in items-center justify-center text-center">
+                           <div className="w-16 h-16 bg-surface-container rounded-full flex items-center justify-center text-on-surface-variant mb-4">
+                              <span className="material-symbols-outlined text-[32px]">event_busy</span>
+                           </div>
+                           <h3 className="text-xl font-bold mb-2">Kayıt Bulunamadı</h3>
+                           <p className="text-on-surface-variant text-sm mb-8 max-w-xs">Bu güne ait harcama kaydı yok. Geriye dönük bir harcama ekleyebilirsiniz.</p>
+                           <button onClick={() => { setHistoryAddDate(selectedDate); setShowHistoryAddModal(true); }} className="bg-primary text-on-primary px-6 py-3 rounded-xl font-bold shadow-sm hover:brightness-105 transition-all">
+                              Harcama Ekle
+                           </button>
+                        </div>
+                     )
+                  )}
+                </div>
+              </div>
+
             </div>
           </div>
         );
@@ -2126,9 +1995,15 @@ const handleLogout = async () => {
                     <div key={s} className={`w-2 h-2 rounded-full ${s === tutorialStep ? 'bg-[#22C55E]' : 'bg-[#E2E8F0]'}`} />
                   ))}
                 </div>
-                <button onClick={nextTutorialStep} className="bg-[#0F172A] text-white px-4 py-2 rounded-xl text-xs font-sans font-medium hover:bg-[#22C55E] transition-colors">
-                  {tutorialStep === 4 ? 'Bitir' : 'İleri'}
-                </button>
+                {tutorialStep === 4 ? (
+                  <button onClick={() => { skipTutorial(); setShowInvestment(true); }} className="bg-primary-container text-on-primary-fixed px-4 py-2 rounded-xl text-xs font-bold hover:brightness-110 transition-colors shadow-sm">
+                    Yatırıma Geç
+                  </button>
+                ) : (
+                  <button onClick={nextTutorialStep} className="bg-surface-dim text-on-surface px-4 py-2 rounded-xl text-xs font-bold hover:bg-surface-variant transition-colors">
+                    İleri
+                  </button>
+                )}
               </div>
             </div>
           </div>
