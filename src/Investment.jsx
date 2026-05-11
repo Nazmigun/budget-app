@@ -33,6 +33,14 @@ export default function InvestmentPage({
   const [showTxModal, setShowTxModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
   const [showGoalModal, setShowGoalModal] = useState(false);
+  const [showAddCoinModal, setShowAddCoinModal] = useState(false);
+  const [newCoinSymbol, setNewCoinSymbol] = useState('');
+  const [newCoinName, setNewCoinName] = useState('');
+  
+  const [newGoalName, setNewGoalName] = useState('');
+  const [newGoalTarget, setNewGoalTarget] = useState('');
+  const [chartInterval, setChartInterval] = useState('1A');
+  const [refreshInterval, setRefreshInterval] = useState(10);
   
   const [txType, setTxType] = useState('buy');
   const [txAssetId, setTxAssetId] = useState('');
@@ -44,7 +52,8 @@ export default function InvestmentPage({
     return [...DEFAULT_ASSETS, ...watchedAssets.filter(a => !DEFAULT_ASSETS.some(d => d.id === a.id))];
   }, [watchedAssets]);
 
-  const fetchPrices = async () => {
+  const fetchPricesRef = useRef();
+  fetchPricesRef.current = async () => {
     setPricesLoading(true);
     setPricesError(null);
     try {
@@ -89,11 +98,15 @@ export default function InvestmentPage({
     }
   };
 
+  const fetchPrices = () => fetchPricesRef.current();
+
   useEffect(() => {
     fetchPrices();
-    const interval = setInterval(fetchPrices, 1 * 60 * 1000);
+    const interval = setInterval(() => {
+      fetchPrices();
+    }, refreshInterval * 1000);
     return () => clearInterval(interval);
-  }, [allAssets.length]);
+  }, [allAssets.length, refreshInterval]);
 
   const portfolio = useMemo(() => {
     const holdings = {};
@@ -217,6 +230,39 @@ export default function InvestmentPage({
     }
   };
 
+  const handleAddCoin = () => {
+    if (!newCoinSymbol || !newCoinName) return;
+    const newCoin = {
+      id: newCoinSymbol.toLowerCase(),
+      symbol: newCoinSymbol.toUpperCase(),
+      name: newCoinName,
+      type: 'crypto',
+      source: 'coingecko',
+      cgId: newCoinName.toLowerCase().replace(/\s+/g, '-') 
+    };
+    onUpdateWatchedAssets([...watchedAssets, newCoin]);
+    setShowAddCoinModal(false);
+    setNewCoinSymbol('');
+    setNewCoinName('');
+    setTimeout(fetchPrices, 100);
+  };
+
+  const handleAddGoal = () => {
+    if (!newGoalName || !newGoalTarget) return;
+    const newGoal = {
+      id: Date.now().toString(),
+      name: newGoalName,
+      target: parseFloat(newGoalTarget),
+      current: 0,
+      icon: 'flag',
+      active: true
+    };
+    onUpdateGoals([...investmentGoals, newGoal]);
+    setShowGoalModal(false);
+    setNewGoalName('');
+    setNewGoalTarget('');
+  };
+
   // Mock chart data if empty
   const chartData = portfolioSnapshots.length > 0 ? portfolioSnapshots : [
     { date: '01 Oca', value: 100000 },
@@ -314,7 +360,7 @@ export default function InvestmentPage({
                   <div className="flex-1 flex flex-col min-h-[300px]">
                      <div className="flex bg-[#1E293B] rounded-lg p-1 mb-4 w-fit">
                         {['1G', '1H', '1A', '3A', 'YTD'].map(p => (
-                           <button key={p} className={`px-6 py-1.5 rounded text-xs font-bold ${p === '1A' ? 'bg-[#111827] text-[#00FF85]' : 'text-[#64748B]'}`}>{p}</button>
+                           <button key={p} onClick={() => setChartInterval(p)} className={`px-6 py-1.5 rounded text-xs font-bold transition-all ${chartInterval === p ? 'bg-[#111827] text-[#00FF85]' : 'text-[#64748B] hover:text-white'}`}>{p}</button>
                         ))}
                      </div>
                      <div className="flex-1 w-full -ml-4">
@@ -405,14 +451,14 @@ export default function InvestmentPage({
                          <span>SON GÜNCELLEME</span>
                          <span className="text-white font-mono">{lastUpdate ? lastUpdate.toLocaleTimeString() : '--:--:--'}</span>
                       </div>
-                      <div className="flex items-center gap-2 border border-[#1E293B] px-3 py-2 rounded bg-[#0A0F16] text-[#64748B] text-xs cursor-pointer hover:text-white">
-                         <span>30sn</span>
-                         <span className="material-symbols-outlined text-[16px]">expand_more</span>
-                      </div>
+                      <button onClick={() => setRefreshInterval(prev => prev === 10 ? 30 : prev === 30 ? 60 : 10)} className="flex items-center gap-2 border border-[#1E293B] px-3 py-2 rounded bg-[#0A0F16] text-[#64748B] text-xs cursor-pointer hover:text-white transition-colors">
+                         <span>{refreshInterval}sn</span>
+                         <span className="material-symbols-outlined text-[16px]">sync</span>
+                      </button>
                       <button onClick={fetchPrices} className="flex items-center gap-2 border border-[#1E293B] px-4 py-2 rounded bg-[#0A0F16] text-white text-xs font-bold hover:bg-[#1E293B] transition-colors">
                          <span className="material-symbols-outlined text-[16px]">refresh</span> YENİLE
                       </button>
-                      <button className="flex items-center gap-2 bg-[#00FF85] text-black px-4 py-2 rounded font-bold text-xs hover:brightness-110 transition-colors">
+                      <button onClick={() => setShowAddCoinModal(true)} className="flex items-center gap-2 bg-[#00FF85] text-black px-4 py-2 rounded font-bold text-xs hover:brightness-110 transition-colors">
                          <span className="material-symbols-outlined text-[16px]">add</span> COIN EKLE
                       </button>
                    </div>
@@ -505,89 +551,56 @@ export default function InvestmentPage({
              </div>
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Example Mock Goals reflecting screenshot */}
-                <div className="bg-[#111827] border border-[#00FF85] rounded-lg p-6 relative overflow-hidden">
-                   <div className="flex justify-between items-start mb-10">
-                      <div className="flex items-center gap-4">
-                         <div className="w-12 h-12 bg-[#1E293B] rounded flex items-center justify-center text-[#00FF85]">
-                            <span className="material-symbols-outlined">home</span>
-                         </div>
-                         <div>
-                            <h3 className="text-lg font-bold text-white">Ev Peşinatı</h3>
-                            <div className="flex items-center gap-1 mt-1">
-                               <div className="w-1.5 h-1.5 rounded-full bg-[#00FF85]"></div>
-                               <span className="text-[#64748B] text-xs">Aktif</span>
+                {investmentGoals.length === 0 && (
+                   <div className="col-span-1 md:col-span-2 text-center py-10 text-[#64748B] text-sm">
+                      Henüz hedef eklemediniz. "Yeni Hedef" butonundan ekleyebilirsiniz.
+                   </div>
+                )}
+                {investmentGoals.map(goal => {
+                   const progress = goal.target > 0 ? Math.min((goal.current / goal.target) * 100, 100) : 0;
+                   const isCompleted = progress >= 100;
+                   const colorClass = isCompleted ? 'text-[#FACC15]' : 'text-[#00FF85]';
+                   const bgClass = isCompleted ? 'bg-[#FACC15]' : 'bg-[#00FF85]';
+                   
+                   return (
+                      <div key={goal.id} className={`bg-[#111827] border ${isCompleted ? 'border-[#FACC15]/50' : 'border-[#1E293B]'} rounded-lg p-6 relative overflow-hidden`}>
+                         <div className="flex justify-between items-start mb-10">
+                            <div className="flex items-center gap-4">
+                               <div className={`w-12 h-12 bg-[#1E293B] rounded flex items-center justify-center ${colorClass}`}>
+                                  <span className="material-symbols-outlined">{goal.icon || 'flag'}</span>
+                               </div>
+                               <div>
+                                  <h3 className="text-lg font-bold text-white">{goal.name}</h3>
+                                  <div className="flex items-center gap-1 mt-1">
+                                     {isCompleted ? (
+                                        <>
+                                           <span className="material-symbols-outlined text-[#FACC15] text-[12px]">check_circle</span>
+                                           <span className="text-[#FACC15] text-xs">Tamamlandı</span>
+                                        </>
+                                     ) : (
+                                        <>
+                                           <div className={`w-1.5 h-1.5 rounded-full ${bgClass}`}></div>
+                                           <span className="text-[#64748B] text-xs">Aktif</span>
+                                        </>
+                                     )}
+                                  </div>
+                               </div>
+                            </div>
+                            <div className="text-right">
+                               <div className={`${colorClass} font-bold text-xl font-mono`}>{formatCurrency(goal.current, 0)}</div>
+                               {!isCompleted && <div className="text-[#64748B] text-xs font-mono">/ {formatCurrency(goal.target, 0)}</div>}
                             </div>
                          </div>
-                      </div>
-                      <div className="text-right">
-                         <div className="text-[#00FF85] font-bold text-xl font-mono">₺450.000</div>
-                         <div className="text-[#64748B] text-xs font-mono">/ ₺1.200.000</div>
-                      </div>
-                   </div>
-                   <div className="flex justify-between items-end mb-2">
-                      <span className="text-[#00FF85] font-bold text-xs">37.5%</span>
-                      <span className="text-[#64748B] text-xs font-mono">Kalan: ₺750.000</span>
-                   </div>
-                   <div className="w-full bg-[#1E293B] h-2 rounded-full overflow-hidden">
-                      <div className="bg-[#00FF85] h-full" style={{ width: '37.5%' }}></div>
-                   </div>
-                </div>
-
-                <div className="bg-[#111827] border border-[#1E293B] rounded-lg p-6 relative overflow-hidden">
-                   <div className="flex justify-between items-start mb-10">
-                      <div className="flex items-center gap-4">
-                         <div className="w-12 h-12 bg-[#1E293B] rounded flex items-center justify-center text-white">
-                            <span className="material-symbols-outlined">directions_car</span>
+                         <div className="flex justify-between items-end mb-2">
+                            <span className={`${colorClass} font-bold text-xs`}>{progress.toFixed(1)}%</span>
+                            {!isCompleted && <span className="text-[#64748B] text-xs font-mono">Kalan: {formatCurrency(goal.target - goal.current, 0)}</span>}
                          </div>
-                         <div>
-                            <h3 className="text-lg font-bold text-white">Yeni Araç</h3>
-                            <div className="flex items-center gap-1 mt-1">
-                               <div className="w-1.5 h-1.5 rounded-full bg-[#00FF85]"></div>
-                               <span className="text-[#64748B] text-xs">Aktif</span>
-                            </div>
+                         <div className="w-full bg-[#1E293B] h-2 rounded-full overflow-hidden">
+                            <div className={`${bgClass} h-full transition-all`} style={{ width: `${progress}%` }}></div>
                          </div>
                       </div>
-                      <div className="text-right">
-                         <div className="text-white font-bold text-xl font-mono">₺280.000</div>
-                         <div className="text-[#64748B] text-xs font-mono">/ ₺800.000</div>
-                      </div>
-                   </div>
-                   <div className="flex justify-between items-end mb-2">
-                      <span className="text-white font-bold text-xs">35.0%</span>
-                      <span className="text-[#64748B] text-xs font-mono">Kalan: ₺520.000</span>
-                   </div>
-                   <div className="w-full bg-[#1E293B] h-2 rounded-full overflow-hidden">
-                      <div className="bg-white h-full" style={{ width: '35%' }}></div>
-                   </div>
-                </div>
-
-                <div className="bg-[#111827] border border-[#1E293B] rounded-lg p-6 relative overflow-hidden md:col-span-2">
-                   <div className="flex justify-between items-start mb-10">
-                      <div className="flex items-center gap-4">
-                         <div className="w-12 h-12 bg-[#FACC15]/10 border border-[#FACC15] rounded flex items-center justify-center text-[#FACC15]">
-                            <span className="material-symbols-outlined">flight_takeoff</span>
-                         </div>
-                         <div>
-                            <h3 className="text-lg font-bold text-white">Avrupa Turu</h3>
-                            <div className="flex items-center gap-1 mt-1">
-                               <span className="material-symbols-outlined text-[#FACC15] text-[12px]">check_circle</span>
-                               <span className="text-[#FACC15] text-xs">Tamamlandı</span>
-                            </div>
-                         </div>
-                      </div>
-                      <div className="text-right">
-                         <div className="text-[#FACC15] font-bold text-xl font-mono">₺150.000</div>
-                      </div>
-                   </div>
-                   <div className="flex justify-between items-end mb-2">
-                      <span className="text-[#FACC15] font-bold text-xs">100%</span>
-                      <span className="text-[#64748B] text-xs font-mono">Kalan: ₺0</span>
-                   </div>
-                   <div className="w-full bg-[#1E293B] h-2 rounded-full overflow-hidden">
-                      <div className="bg-[#FACC15] h-full" style={{ width: '100%' }}></div>
-                   </div>
-                </div>
+                   );
+                })}
              </div>
           </div>
         )}
@@ -617,6 +630,69 @@ export default function InvestmentPage({
         )}
 
       </main>
+
+      {/* ======================= COIN EKLE MODAL ======================= */}
+      {showAddCoinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+           <div className="bg-[#111827] border border-[#00FF85] rounded-xl w-full max-w-md p-6 relative">
+              <div className="flex items-center justify-between mb-8 border-b border-[#1E293B] pb-4">
+                 <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-[#00FF85]"></div>
+                    <h2 className="text-xl font-bold text-white uppercase tracking-widest">COIN EKLE</h2>
+                 </div>
+                 <button onClick={() => setShowAddCoinModal(false)} className="text-[#64748B] hover:text-white">
+                    <span className="material-symbols-outlined">close</span>
+                 </button>
+              </div>
+
+              <div className="space-y-6">
+                 <div>
+                    <label className="block text-[#64748B] text-xs font-bold uppercase tracking-widest mb-2">COIN SEMBOLÜ</label>
+                    <input type="text" value={newCoinSymbol} onChange={(e) => setNewCoinSymbol(e.target.value)} placeholder="Örn: DOGE" className="w-full bg-transparent border-b border-[#1E293B] text-white py-3 outline-none font-mono focus:border-[#00FF85] transition-colors" />
+                 </div>
+                 <div>
+                    <label className="block text-[#64748B] text-xs font-bold uppercase tracking-widest mb-2">COIN ADI</label>
+                    <input type="text" value={newCoinName} onChange={(e) => setNewCoinName(e.target.value)} placeholder="Örn: Dogecoin" className="w-full bg-transparent border-b border-[#1E293B] text-white py-3 outline-none focus:border-[#00FF85] transition-colors" />
+                    <p className="text-[#64748B] text-xs mt-2">CoinGecko adıyla eşleşmelidir (örn: dogecoin).</p>
+                 </div>
+                 <button onClick={handleAddCoin} className="w-full py-4 rounded font-bold uppercase tracking-widest flex items-center justify-center gap-2 mt-4 bg-[#00FF85] text-black hover:brightness-110">
+                    <span className="material-symbols-outlined text-[18px]">add</span> İZLEME LİSTESİNE EKLE
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* ======================= YENİ HEDEF MODAL ======================= */}
+      {showGoalModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+           <div className="bg-[#111827] border border-[#00FF85] rounded-xl w-full max-w-md p-6 relative">
+              <div className="flex items-center justify-between mb-8 border-b border-[#1E293B] pb-4">
+                 <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-[#00FF85]"></div>
+                    <h2 className="text-xl font-bold text-white uppercase tracking-widest">YENİ HEDEF</h2>
+                 </div>
+                 <button onClick={() => setShowGoalModal(false)} className="text-[#64748B] hover:text-white">
+                    <span className="material-symbols-outlined">close</span>
+                 </button>
+              </div>
+
+              <div className="space-y-6">
+                 <div>
+                    <label className="block text-[#64748B] text-xs font-bold uppercase tracking-widest mb-2">HEDEF ADI</label>
+                    <input type="text" value={newGoalName} onChange={(e) => setNewGoalName(e.target.value)} placeholder="Örn: Ev Peşinatı" className="w-full bg-transparent border-b border-[#1E293B] text-white py-3 outline-none focus:border-[#00FF85] transition-colors" />
+                 </div>
+                 <div>
+                    <label className="block text-[#64748B] text-xs font-bold uppercase tracking-widest mb-2">HEDEF TUTAR (₺)</label>
+                    <input type="number" value={newGoalTarget} onChange={(e) => setNewGoalTarget(e.target.value)} placeholder="0.00" className="w-full bg-transparent border-b border-[#1E293B] text-white py-3 outline-none font-mono focus:border-[#00FF85] transition-colors" />
+                 </div>
+                 <button onClick={handleAddGoal} className="w-full py-4 rounded font-bold uppercase tracking-widest flex items-center justify-center gap-2 mt-4 bg-[#00FF85] text-black hover:brightness-110">
+                    <span className="material-symbols-outlined text-[18px]">add</span> HEDEFİ KAYDET
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* ======================= İŞLEM EKLE MODAL ======================= */}
       {showTxModal && (
