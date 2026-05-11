@@ -32,6 +32,7 @@ export default function InvestmentPage({
   
   const [showTxModal, setShowTxModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
+  const [showGoalModal, setShowGoalModal] = useState(false);
   
   const [txType, setTxType] = useState('buy');
   const [txAssetId, setTxAssetId] = useState('');
@@ -169,6 +170,13 @@ export default function InvestmentPage({
       style: 'currency', currency: curr,
       maximumFractionDigits: maxDigits !== undefined ? maxDigits : (Math.abs(convertedVal) > 100 ? 2 : 2)
     }).format(convertedVal);
+  };
+
+  const formatAmount = (val) => {
+    if (val === null || val === undefined || isNaN(val)) return '—';
+    if (val === 0) return '0';
+    if (Math.abs(val) < 0.001) return val.toExponential(2);
+    return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: Math.abs(val) < 1 ? 6 : (Math.abs(val) < 100 ? 4 : 2) }).format(val);
   };
 
   const openTxModal = (existingTx = null) => {

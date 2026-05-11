@@ -975,7 +975,7 @@ const handleLogout = async () => {
         <div className="flex flex-col md:flex-row items-stretch gap-3">
           <button 
             onClick={() => setShowInvestment(true)} 
-            className="hidden md:flex bg-surface-container-lowest text-primary hover:bg-surface-container-low transition-all rounded-xl px-5 items-center justify-center gap-2 shrink-0 border border-surface-variant shadow-sm"
+            className="flex w-full md:w-auto bg-surface-container-lowest text-primary hover:bg-surface-container-low transition-all rounded-xl px-5 py-4 md:py-0 items-center justify-center gap-2 shrink-0 border border-surface-variant shadow-sm"
           >
             <span className="material-symbols-outlined text-[20px]">trending_up</span>
             <span className="font-label-caps text-[12px] font-bold uppercase tracking-wider">Yatırım Menüsü</span>
