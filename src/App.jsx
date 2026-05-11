@@ -699,273 +699,171 @@ const handleLogout = async () => {
   // SETUP SCREEN
   if (step === 'setup') {
     return (
-      <div className="min-h-screen w-full" style={{
-        fontFamily: "'Fraunces', Georgia, serif",
-        background: 'linear-gradient(135deg, #F8FAFC 0%, #F8FAFC 100%)',
-        color: '#0F172A'
-      }}>
-        
+      <div className="bg-surface text-on-surface font-body-md antialiased min-h-screen flex flex-col items-center justify-center p-container-margin md:p-stack-lg">
+        <header className="w-full max-w-2xl mb-stack-lg text-center">
+          <h1 className="font-display-tr text-display-tr text-primary mb-stack-sm">Mali Kontrol</h1>
+          <p className="font-body-md text-body-md text-on-surface-variant">Kişisel ekonominizi düzenlemek için ilk adımı atın.</p>
+        </header>
 
-        <div className="max-w-2xl mx-auto px-6 py-12 md:py-20">
-          {/* Header */}
-          <div className="fade-up delay-1 mb-12">
-            <div className="flex items-center gap-2 mb-6 font-sans" style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#64748B' }}>
-              <span style={{ width: '24px', height: '1px', background: '#64748B' }}></span>
-              Bütçe Kurulumu
+        <main className="w-full max-w-2xl">
+          {/* Step 1: Monthly Salary */}
+          <section className="bg-surface-container-lowest rounded-2xl p-container-margin shadow-sm mb-stack-md flex flex-col gap-stack-md">
+            <div className="flex items-center gap-stack-sm">
+              <span className="material-symbols-outlined text-primary text-xl">payments</span>
+              <h2 className="font-headline-tr text-headline-tr text-on-surface">1. Aylık Gelir</h2>
             </div>
-            <h1 className="text-5xl md:text-6xl mb-4" style={{ fontWeight: 300, lineHeight: 0.95, letterSpacing: '-0.02em' }}>
-              Mali <em style={{ fontWeight: 400 }}>düzenin</em>
-              <br />
-              başlangıcı.
-            </h1>
-            <p className="font-sans text-base max-w-md mt-6" style={{ color: '#64748B', lineHeight: 1.6 }}>
-              Maaşını ve harcama alışkanlıklarını paylaş; sana her gün için sürdürülebilir bir bütçe önereceğim.
-            </p>
-          </div>
-
-          {/* Salary Input */}
-          <div className="fade-up delay-2 mb-10">
-            <label className="font-sans block mb-3" style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#64748B', fontWeight: 500 }}>
-              01 — Aylık Maaş
-            </label>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Net aylık maaşınızı girin.</p>
             <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 font-numeric-lg text-numeric-lg text-on-surface-variant">₺</span>
               <input
                 type="number"
                 value={salary}
                 onChange={(e) => setSalary(e.target.value)}
                 placeholder="0"
-                className="font-mono-num w-full bg-transparent border-0 border-b-2 outline-none transition-colors font-mono-num"
-                style={{
-                  borderColor: '#0F172A',
-                  fontSize: '48px',
-                  fontWeight: 300,
-                  paddingBottom: '8px',
-                  paddingRight: '60px',
-                  color: '#0F172A'
-                }}
+                className="hide-number-arrows w-full pl-12 pr-4 py-4 rounded-xl border border-surface-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none font-numeric-lg text-numeric-lg text-on-surface bg-surface-container-lowest transition-colors"
               />
-              <span className="font-mono-num absolute right-0 bottom-3 text-2xl" style={{ color: '#64748B', fontWeight: 300 }}>₺</span>
             </div>
-          </div>
+          </section>
 
-          {/* Salary Day */}
-          <div className="fade-up delay-3 mb-10">
-            <label className="font-sans block mb-3" style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#64748B', fontWeight: 500 }}>
-              02 — Maaş Günü <span style={{ fontStyle: 'italic', textTransform: 'none', letterSpacing: 'normal' }}>(opsiyonel)</span>
-            </label>
-            <div className="flex items-baseline gap-3">
-              <span className="font-sans" style={{ color: '#64748B', fontSize: '15px' }}>Her ayın</span>
+          {/* Step 2: Salary Day */}
+          <section className="bg-surface-container-lowest rounded-2xl p-container-margin shadow-sm mb-stack-md flex flex-col gap-stack-md">
+            <div className="flex items-center gap-stack-sm">
+              <span className="material-symbols-outlined text-primary text-xl">calendar_today</span>
+              <h2 className="font-headline-tr text-headline-tr text-on-surface">2. Maaş Günü</h2>
+            </div>
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Bütçe döngünüzün başlayacağı günü seçin.</p>
+            <div className="relative mt-stack-sm">
               <input
                 type="number"
                 min="1"
                 max="31"
                 value={salaryDay}
                 onChange={(e) => setSalaryDay(e.target.value)}
-                placeholder="15"
-                className="number-input bg-transparent border-0 border-b-2 outline-none font-mono-num text-center"
-                style={{
-                  borderColor: '#0F172A',
-                  fontSize: '32px',
-                  fontWeight: 400,
-                  width: '70px',
-                  color: '#0F172A'
-                }}
+                placeholder="Örn: 15"
+                className="w-full px-4 py-4 rounded-xl border border-surface-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none font-numeric-lg text-numeric-lg text-on-surface bg-surface-container-lowest transition-colors"
               />
-              <span className="font-sans" style={{ color: '#64748B', fontSize: '15px' }}>'inde alıyorum.</span>
             </div>
-            <p className="font-sans mt-3" style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.5, fontStyle: 'italic' }}>
-              Eğer girerseniz daha kişisel tavsiyeler alabilirsiniz. Aksi takdirde ay sonuna kadar olan günlere göre hesaplanır.
-            </p>
-          </div>
+          </section>
 
-          {/* Investment Toggle */}
-          <div className="fade-up delay-4 mb-10">
-            <label className="font-sans block mb-3" style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#64748B', fontWeight: 500 }}>
-              03 — Yatırım <span style={{ fontStyle: 'italic', textTransform: 'none', letterSpacing: 'normal' }}>(opsiyonel)</span>
-            </label>
-            
-            <div 
-              onClick={() => setInvestmentEnabled(!investmentEnabled)}
-              className="cursor-pointer p-5 transition-all"
-              style={{
-                background: investmentEnabled ? '#0F172A' : '#FFFFFF',
-                color: investmentEnabled ? '#F8FAFC' : '#0F172A',
-                border: '1px solid #0F172A',
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="font-mono-num text-lg" style={{ fontWeight: 400 }}>
-                    {investmentEnabled ? 'Aktif' : 'Yatırım ayır'}
-                  </div>
-                  <div className="font-sans text-xs mt-1" style={{ opacity: 0.7 }}>
-                    Maaşının bir kısmını harcama dışı tut
-                  </div>
-                </div>
-                <div className="w-10 h-10 flex items-center justify-center" style={{
-                  border: '1px solid currentColor',
-                  borderRadius: '50%'
-                }}>
-                  {investmentEnabled ? <Check size={16} /> : <Plus size={16} />}
-                </div>
+          {/* Step 3: Investment Allocation */}
+          <section className="bg-surface-container-lowest rounded-2xl p-container-margin shadow-sm mb-stack-lg flex flex-col gap-stack-md">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-stack-sm">
+                <span className="material-symbols-outlined text-primary text-xl">trending_up</span>
+                <h2 className="font-headline-tr text-headline-tr text-on-surface">3. Yatırım Tahsisi</h2>
               </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={investmentEnabled} onChange={() => setInvestmentEnabled(!investmentEnabled)} />
+                <div className="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
             </div>
-
+            <p className="font-body-sm text-body-sm text-on-surface-variant">Maaşınız yattığı an otomatik olarak ayrılacak yatırım miktarını belirleyin.</p>
+            
             {investmentEnabled && (
-              <div className="fade-up mt-5 p-6" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
-                {/* Mode toggle */}
-                <div className="flex gap-1 mb-6 p-1" style={{ background: '#F8FAFC' }}>
-                  <button
-                    onClick={() => setInvestmentMode('percent')}
-                    className="font-sans flex-1 py-2 text-xs transition-all"
-                    style={{
-                      background: investmentMode === 'percent' ? '#0F172A' : 'transparent',
-                      color: investmentMode === 'percent' ? '#F8FAFC' : '#64748B',
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      fontWeight: 500
-                    }}
-                  >
-                    Yüzde
-                  </button>
-                  <button
-                    onClick={() => setInvestmentMode('fixed')}
-                    className="font-sans flex-1 py-2 text-xs transition-all"
-                    style={{
-                      background: investmentMode === 'fixed' ? '#0F172A' : 'transparent',
-                      color: investmentMode === 'fixed' ? '#F8FAFC' : '#64748B',
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      fontWeight: 500
-                    }}
-                  >
-                    Sabit Tutar
-                  </button>
+              <div className="flex flex-col sm:flex-row gap-stack-md mt-stack-sm">
+                <div className="flex-1 flex flex-col gap-stack-sm">
+                  <label className="font-label-caps text-label-caps text-on-surface-variant">YÖNTEM</label>
+                  <div className="flex rounded-xl bg-surface-container p-1">
+                    <button
+                      onClick={() => setInvestmentMode('percent')}
+                      className={`flex-1 py-2 px-4 rounded-lg font-body-sm text-body-sm font-medium transition-all ${investmentMode === 'percent' ? 'bg-surface-container-lowest shadow-sm text-on-surface' : 'text-on-surface-variant hover:text-on-surface'}`}
+                    >
+                      Yüzde (%)
+                    </button>
+                    <button
+                      onClick={() => setInvestmentMode('fixed')}
+                      className={`flex-1 py-2 px-4 rounded-lg font-body-sm text-body-sm font-medium transition-all ${investmentMode === 'fixed' ? 'bg-surface-container-lowest shadow-sm text-on-surface' : 'text-on-surface-variant hover:text-on-surface'}`}
+                    >
+                      Sabit (₺)
+                    </button>
+                  </div>
                 </div>
 
-                {investmentMode === 'percent' ? (
-                  <div>
-                    <div className="flex items-baseline justify-between mb-4">
-                      <span className="font-sans text-xs" style={{ color: '#64748B', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                        Maaş Yüzdesi
-                      </span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-mono-num text-3xl" style={{ fontWeight: 400 }}>{investmentPercent}</span>
-                        <span className="font-mono-num text-lg" style={{ color: '#64748B' }}>%</span>
+                <div className="flex-1 flex flex-col gap-stack-sm">
+                  {investmentMode === 'percent' ? (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <label className="font-label-caps text-label-caps text-on-surface-variant">ORAN</label>
+                        <span className="font-numeric-md text-numeric-md text-on-surface">{investmentPercent}%</span>
                       </div>
-                    </div>
-                    <input
-                      type="range"
-                      min="5"
-                      max="30"
-                      value={investmentPercent}
-                      onChange={(e) => setInvestmentPercent(parseInt(e.target.value))}
-                      className="w-full"
-                    />
-                    <div className="flex justify-between mt-2 font-sans text-xs" style={{ color: '#64748B' }}>
-                      <span>%5</span>
-                      <span>%30</span>
-                    </div>
-                    {salary && (
-                      <div className="mt-4 pt-4" style={{ borderTop: '1px solid #E2E8F0' }}>
-                        <div className="flex justify-between items-baseline">
-                          <span className="font-sans text-xs" style={{ color: '#64748B' }}>Yatırıma ayrılacak</span>
-                          <span className="font-mono-num text-xl">{formatCurrency(parseFloat(salary) * investmentPercent / 100)}</span>
+                      <div className="flex flex-col justify-center h-full pt-1">
+                        <input 
+                          type="range" 
+                          min="5" max="30" 
+                          value={investmentPercent}
+                          onChange={(e) => setInvestmentPercent(parseInt(e.target.value))}
+                          className="w-full h-2 bg-surface-variant rounded-lg appearance-none cursor-pointer accent-primary" 
+                        />
+                        <div className="flex justify-between mt-2">
+                          <span className="font-body-sm text-[12px] text-on-surface-variant">%5</span>
+                          <span className="font-body-sm text-[12px] text-on-surface-variant">%30</span>
                         </div>
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  <div>
-                    <label className="font-sans text-xs block mb-3" style={{ color: '#64748B', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                      Yatırım Tutarı
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={investmentAmount}
-                        onChange={(e) => setInvestmentAmount(e.target.value)}
-                        placeholder="0"
-                        className="number-input w-full bg-transparent border-0 border-b outline-none font-mono-num"
-                        style={{
-                          borderColor: '#64748B',
-                          fontSize: '28px',
-                          fontWeight: 300,
-                          paddingBottom: '6px',
-                          paddingRight: '40px'
-                        }}
-                      />
-                      <span className="font-mono-num absolute right-0 bottom-2 text-lg" style={{ color: '#64748B' }}>₺</span>
-                    </div>
-                  </div>
-                )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <label className="font-label-caps text-label-caps text-on-surface-variant">TUTAR</label>
+                      </div>
+                      <div className="relative mt-2">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 font-numeric-md text-on-surface-variant">₺</span>
+                        <input
+                          type="number"
+                          value={investmentAmount}
+                          onChange={(e) => setInvestmentAmount(e.target.value)}
+                          placeholder="0"
+                          className="w-full pl-8 pr-3 py-2 rounded-lg border border-surface-variant focus:border-primary focus:ring-1 focus:ring-primary outline-none font-numeric-md text-on-surface bg-surface-container-lowest transition-colors"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )}
-          </div>
+          </section>
 
-          {/* Summary Preview */}
-          {salary && (
-            <div className="fade-up delay-5 mb-10 p-6" style={{
-              background: '#0F172A',
-              color: '#F8FAFC',
-            }}>
-              <div className="font-sans text-xs mb-4" style={{ letterSpacing: '0.15em', textTransform: 'uppercase', opacity: 0.6 }}>
-                Önizleme
+          {/* Bottom Preview Card & CTA */}
+          <section className="bg-surface-container-lowest rounded-2xl p-container-margin shadow-sm border border-surface-variant mb-stack-lg relative overflow-hidden">
+            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary opacity-5 rounded-full blur-2xl pointer-events-none"></div>
+            <h3 className="font-label-caps text-label-caps text-on-surface-variant mb-stack-md">ÖNGÖRÜLEN BÜTÇE</h3>
+            
+            <div className="flex flex-col gap-stack-sm mb-stack-lg">
+              <div className="flex justify-between items-center py-2 border-b border-surface-variant/50">
+                <span className="font-body-md text-body-md text-on-surface">Maaş</span>
+                <span className="font-numeric-md text-numeric-md text-on-surface">{formatCurrency(calculations.salaryNum)}</span>
               </div>
-              <div className="space-y-3">
-                <div className="flex justify-between items-baseline">
-                  <span className="font-sans text-sm" style={{ opacity: 0.7 }}>Maaş</span>
-                  <span className="font-mono-num text-xl">{formatCurrency(calculations.salaryNum)}</span>
-                </div>
-                {investmentEnabled && (
-                  <div className="flex justify-between items-baseline">
-                    <span className="font-sans text-sm" style={{ opacity: 0.7 }}>− Yatırım</span>
-                    <span className="font-mono-num text-xl">{formatCurrency(calculations.invAmount)}</span>
-                  </div>
-                )}
-                <div className="pt-3 flex justify-between items-baseline" style={{ borderTop: '1px solid rgba(248, 250, 252, 0.2)' }}>
-                  <span className="font-sans text-sm">Harcanabilir</span>
-                  <span className="font-mono-num text-2xl" style={{ fontWeight: 400 }}>{formatCurrency(calculations.remaining)}</span>
-                </div>
-                <div className="pt-3 flex justify-between items-baseline">
-                  <span className="font-sans text-sm" style={{ opacity: 0.7 }}>
-                    Günlük limit ({calculations.daysUntilNextSalary} gün)
-                  </span>
-                  <span className="font-mono-num text-2xl" style={{ fontWeight: 500, color: '#22C55E' }}>
-                    {formatCurrency(calculations.dailyLimit)}
-                  </span>
-                </div>
-                {!calculations.hasSalaryDay && (
-                  <div className="pt-3 font-sans text-xs" style={{ opacity: 0.5, fontStyle: 'italic' }}>
-                    Ay sonuna kadar olan günlere göre hesaplandı.
-                  </div>
-                )}
+              <div className="flex justify-between items-center py-2 border-b border-surface-variant/50">
+                <span className="font-body-md text-body-md text-on-surface-variant">Yatırım (Otomatik)</span>
+                <span className="font-numeric-md text-numeric-md text-secondary">-{formatCurrency(calculations.invAmount)}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2">
+                <span className="font-body-md text-body-md font-semibold text-on-surface">Harcanabilir Bakiye</span>
+                <span className="font-numeric-lg text-numeric-lg text-primary">{formatCurrency(calculations.remaining)}</span>
               </div>
             </div>
-          )}
 
-          {/* Continue Button */}
-          <button
-            onClick={handleSetupComplete}
-            disabled={!salary}
-            className="fade-up delay-5 w-full font-sans py-5 transition-all flex items-center justify-center gap-3 group"
-            style={{
-              background: (!salary) ? '#E2E8F0' : '#0F172A',
-              color: (!salary) ? '#64748B' : '#F8FAFC',
-              cursor: (!salary) ? 'not-allowed' : 'pointer',
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-              fontSize: '12px',
-              fontWeight: 500
-            }}
-          >
-            Panele Geç
-            <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-          </button>
-        </div>
+            <div className="bg-surface-container rounded-xl p-4 flex justify-between items-center mb-stack-lg">
+              <div className="flex flex-col">
+                <span className="font-label-caps text-label-caps text-on-surface-variant mb-1">GÜNLÜK LİMİT</span>
+                <span className="font-body-sm text-body-sm text-on-surface">Kalan {calculations.daysUntilNextSalary} gün için ortalama</span>
+              </div>
+              <span className="font-numeric-md text-numeric-md text-on-surface">{formatCurrency(calculations.dailyLimit)}</span>
+            </div>
+
+            <button
+              onClick={handleSetupComplete}
+              disabled={!salary}
+              className={`w-full py-4 rounded-xl font-headline-tr text-headline-tr transition-all flex justify-center items-center gap-2 ${!salary ? 'bg-surface-variant text-on-surface-variant opacity-50 cursor-not-allowed' : 'bg-primary-container text-on-primary text-on-primary hover:opacity-90'}`}
+            >
+              Panele Geç
+              <span className="material-symbols-outlined">arrow_forward</span>
+            </button>
+          </section>
+        </main>
       </div>
     );
   }
+
 
   // DASHBOARD
   const progressPercent = todayBudget > 0 ? Math.min((todayTotal / todayBudget) * 100, 100) : 0;
@@ -990,294 +888,202 @@ const handleLogout = async () => {
   }
 
   return (
-    <div className="min-h-screen w-full" style={{
-      fontFamily: "'Fraunces', Georgia, serif",
-      background: 'linear-gradient(135deg, #F8FAFC 0%, #F8FAFC 100%)',
-      color: '#0F172A'
-    }}>
+    <div className="bg-surface text-on-surface font-body-md antialiased min-h-screen flex flex-col pb-[100px] md:pb-0">
       
-
-      <div className="max-w-2xl mx-auto px-5 py-8 md:py-12">
-        {/* User bar */}
-        <div className="flex items-center justify-between mb-6 font-sans text-xs">
-          <div className="flex items-center gap-2 min-w-0" style={{ color: '#64748B' }}>
-            {syncStatus === 'syncing' ? (
-              <><Loader size={11} className="spin flex-shrink-0" style={{ color: '#F59E0B' }} /><span className="truncate">Senkronize ediliyor...</span></>
-            ) : syncStatus === 'error' ? (
-              <><CloudOff size={11} className="flex-shrink-0" style={{ color: '#EF4444' }} /><span>Bağlantı hatası</span></>
-            ) : (
-              <><Cloud size={11} className="flex-shrink-0" style={{ color: '#22C55E' }} /><span className="truncate">{session.user.email}</span></>
-            )}
+      {/* TopAppBar */}
+      <header className="bg-surface w-full sticky top-0 z-40 shadow-sm transition-all duration-300">
+        <div className="flex justify-between items-center px-container-margin py-4 w-full max-w-7xl mx-auto">
+          <div className="font-display-tr text-display-tr font-bold text-primary flex items-center gap-3">
+            Mali Kontrol
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1 transition-all"
-            style={{ color: '#64748B', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}
-          >
-            <LogOut size={11} />
-            <span>Çıkış</span>
-          </button>
-        </div>
-        
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 gap-3">
-          <div className="min-w-0">
-            <div className="font-sans text-xs mb-1 truncate" style={{ letterSpacing: '0.2em', textTransform: 'uppercase', color: '#64748B' }}>
-              {todayFormatted.full}
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 mr-2">
+              <span className={`w-2 h-2 rounded-full ${syncStatus === 'syncing' ? 'bg-secondary' : syncStatus === 'error' ? 'bg-error' : 'bg-primary-container'}`}></span>
+              <span className="font-body-sm text-body-sm text-on-surface-variant">{session.user.email}</span>
             </div>
-            <h1 className="text-3xl md:text-4xl" style={{ fontWeight: 300, letterSpacing: '-0.02em' }}>
-              <em style={{ fontWeight: 400 }}>Bugünkü</em> bütçen
-            </h1>
-          </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <button 
-              onClick={() => { setShowTutorial(true); setTutorialStep(1); }}
-              className="font-sans text-xs flex items-center justify-center w-8 h-8 transition-all rounded-full hover:bg-gray-100"
-              style={{ border: '1px solid #E2E8F0', color: '#64748B' }}
-              title="Eğitim"
-            >
-              <HelpCircle size={14} />
+            <button onClick={() => { setShowTutorial(true); setTutorialStep(1); }} aria-label="Yardım" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+              <span className="material-symbols-outlined">help</span>
             </button>
-  
-            <button 
-              onClick={() => setShowInvestment(true)}
-              className={`font-sans text-xs flex items-center gap-2 px-3 py-2 transition-all rounded-xl ${showTutorial && tutorialStep === 4 ? 'tutorial-target-interactive' : ''}`}
-            >
-              <Activity size={14} />
-              <span className="hidden sm:inline">Yatırım</span>
+            <button onClick={() => { setCalendarMonth(new Date().getMonth()); setCalendarYear(new Date().getFullYear()); setShowCalendar(true); }} aria-label="Takvim" className={`w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary ${showTutorial && tutorialStep === 3 ? 'tutorial-target-interactive' : ''}`}>
+              <span className="material-symbols-outlined">event</span>
             </button>
-            <button 
-              onClick={() => {
-                setCalendarMonth(new Date().getMonth());
-                setCalendarYear(new Date().getFullYear());
-                setShowCalendar(true);
-              }}
-              style={{
-                border: '1px solid #0F172A',
-                background: '#0F172A',
-                color: '#F8FAFC',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                fontWeight: 500
-              }}
-              title="Takvim & Geçmiş" className={`font-sans text-xs flex items-center gap-2 px-3 py-2 transition-all hover:bg-[#0F172A] hover:text-[#F8FAFC] rounded-xl ${showTutorial && tutorialStep === 3 ? 'tutorial-target-interactive' : ''}`}
-            >
-              <CalendarDays size={14} />
-              <span className="hidden sm:inline">Takvim</span>
+            <button onClick={() => setStep('setup')} aria-label="Ayarlar" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary">
+              <span className="material-symbols-outlined">settings</span>
             </button>
-            <button 
-              onClick={() => setStep('setup')}
-              className="font-sans text-xs px-3 py-2 transition-all"
-              style={{
-                border: '1px solid #0F172A',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                fontWeight: 500
-              }}
-            >
-              Ayarlar
+            <button onClick={handleLogout} aria-label="Çıkış" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary">
+              <span className="material-symbols-outlined">logout</span>
             </button>
           </div>
         </div>
+      </header>
 
-        {/* Main Budget Card */}
-        <div className={`mb-6 p-7 md:p-9 relative overflow-hidden rounded-2xl shadow-soft ${showTutorial && tutorialStep === 1 ? 'tutorial-target' : ''}`} style={{
-          background: '#0F172A',
-          color: '#F8FAFC'
-        }}>
-          {/* decorative corner */}
-          <div className="absolute top-0 right-0 w-32 h-32 opacity-10" style={{
-            background: 'radial-gradient(circle at top right, #22C55E 0%, transparent 70%)'
-          }}></div>
+      <main className="max-w-7xl mx-auto w-full px-container-margin pt-stack-md flex-1 flex flex-col gap-stack-lg">
+        <div className="md:hidden flex items-center gap-2 mb-[-8px]">
+          <span className={`w-2 h-2 rounded-full ${syncStatus === 'syncing' ? 'bg-secondary' : syncStatus === 'error' ? 'bg-error' : 'bg-primary-container'}`}></span>
+          <span className="font-body-sm text-body-sm text-on-surface-variant truncate">{session.user.email}</span>
+        </div>
 
-          <div className="font-sans text-xs mb-2 relative" style={{ letterSpacing: '0.2em', textTransform: 'uppercase', opacity: 0.6 }}>
-            Bugün Kalan
-          </div>
-          
-          <div className="font-mono-num text-6xl md:text-7xl mb-6 relative" style={{ 
-            fontWeight: 300, 
-            letterSpacing: '-0.03em',
-            color: isOverBudget ? '#EF4444' : '#F8FAFC'
-          }}>
-            {formatCurrency(todayRemaining)}
+        {/* Hero Card: Today's Budget */}
+        <section className={`bg-surface-container-lowest rounded-xl shadow-sm p-6 flex flex-col relative overflow-hidden group ${showTutorial && tutorialStep === 1 ? 'tutorial-target' : ''}`}>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary-container opacity-5 rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500"></div>
+          <h2 className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">BUGÜN KALAN</h2>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span className={`font-numeric-lg text-[48px] tracking-tight ${isOverBudget ? 'text-error' : 'text-on-surface'}`}>
+              {formatCurrency(todayRemaining)}
+            </span>
           </div>
 
-          {/* Progress bar */}
-          <div className="relative mb-2">
-            <div className="h-1 w-full rounded-full overflow-hidden" style={{ background: 'rgba(245,239,230,0.15)' }}>
+          <div className="mt-8 relative">
+            <div className="h-3 w-full bg-surface-container rounded-full overflow-hidden flex">
               <div 
-                className="h-full rounded-full transition-all duration-500"
-                style={{ 
-                  width: `${progressPercent}%`,
-                  background: isOverBudget ? '#EF4444' : '#22C55E'
-                }}
+                className={`h-full rounded-full transition-all duration-500 ${isOverBudget ? 'bg-error' : 'bg-primary-container'}`} 
+                style={{ width: `${progressPercent}%` }}
               ></div>
             </div>
           </div>
 
-          <div className="flex justify-between items-baseline mt-3 font-sans text-xs" style={{ opacity: 0.7 }}>
+          <div className="mt-3 flex justify-between items-center font-body-sm text-body-sm text-on-surface-variant">
             <span>{formatCurrency(todayTotal)} harcandı</span>
             <span>{formatCurrency(todayBudget)} limit</span>
           </div>
-
+          
           {calculations.periodHistorySpent > 0 && (
-            <div className="mt-4 pt-4 font-sans text-xs flex justify-between items-center" style={{ borderTop: '1px solid rgba(245,239,230,0.15)', opacity: 0.7 }}>
+            <div className="mt-4 pt-4 font-body-sm flex justify-between items-center text-on-surface-variant border-t border-surface-container">
               <span>Bu döneme kadar harcanan</span>
-              <span className="font-mono-num">
-                {formatCurrency(calculations.periodHistorySpent)}
-              </span>
+              <span className="font-numeric-md">{formatCurrency(calculations.periodHistorySpent)}</span>
             </div>
           )}
-        </div>
+        </section>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-5">
-          <div className="p-5 rounded-2xl shadow-sm" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
-            <div className="font-sans text-xs mb-2" style={{ letterSpacing: '0.15em', textTransform: 'uppercase', color: '#64748B' }}>
-              Aylık Bakiye
-            </div>
-            <div className="font-mono-num text-2xl" style={{ fontWeight: 400 }}>
-              {formatCurrency(overallRemaining)}
-            </div>
+        <section className="grid grid-cols-2 gap-gutter">
+          <div className="bg-surface-container-lowest rounded-xl shadow-sm p-5 flex flex-col justify-between">
+            <span className="font-label-caps text-label-caps text-on-surface-variant mb-3">Aylık Bakiye</span>
+            <span className="font-numeric-md text-[24px] text-on-surface">{formatCurrency(overallRemaining)}</span>
           </div>
-          <div className="p-5 rounded-2xl shadow-sm" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
-            <div className="font-sans text-xs mb-2" style={{ letterSpacing: '0.15em', textTransform: 'uppercase', color: '#64748B' }}>
+          <div className="bg-surface-container-lowest rounded-xl shadow-sm p-5 flex flex-col justify-between">
+            <span className="font-label-caps text-label-caps text-on-surface-variant mb-3">
               {calculations.hasSalaryDay ? 'Maaşa Kalan' : 'Aya Kalan'}
-            </div>
-            <div className="flex items-baseline gap-2">
-              <div className="font-mono-num text-2xl" style={{ fontWeight: 400 }}>
-                {calculations.daysUntilNextSalary}
-              </div>
-              <div className="font-sans text-xs" style={{ color: '#64748B' }}>gün</div>
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary-container text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>event</span>
+              <span className="font-numeric-md text-[24px] text-on-surface">{calculations.daysUntilNextSalary} Gün</span>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Personalized Message */}
         {calculations.hasSalaryDay && calculations.nextSalaryDate && (
-          <div className="mb-6 p-4" style={{ background: 'rgba(232, 199, 127, 0.15)', borderLeft: '3px solid #F59E0B' }}>
-            <div className="font-sans text-xs flex items-start gap-2" style={{ color: '#64748B', lineHeight: 1.5 }}>
-              <Calendar size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
-              <span>
-                Bir sonraki maaş günün <strong>{formatDate(calculations.nextSalaryDate).short}</strong> — {calculations.daysUntilNextSalary} gün sonra. Günlük {formatCurrency(calculations.dailyLimit)} ile rahat ulaşırsın.
-              </span>
-            </div>
+          <div className="bg-secondary-container rounded-xl p-4 text-on-secondary-container flex items-start gap-3">
+            <span className="material-symbols-outlined text-primary mt-0.5">info</span>
+            <span className="font-body-sm">
+              Bir sonraki maaş günün <strong>{formatDate(calculations.nextSalaryDate).short}</strong>. Günlük {formatCurrency(calculations.dailyLimit)} limitin var.
+            </span>
           </div>
         )}
 
-        {/* Today's Expenses */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-sans text-xs" style={{ letterSpacing: '0.2em', textTransform: 'uppercase', color: '#64748B', fontWeight: 500 }}>
-              Bugünkü Harcamalar — {todayExpenses.length}
-            </h2>
-            <button
+        {/* Expenses List */}
+        <section className="flex flex-col gap-4">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
+              BUGÜNKÜ HARCAMALAR — {todayExpenses.length}
+            </h3>
+            <button 
               onClick={() => setShowExpenseModal(true)}
-              className={`font-sans text-xs flex items-center gap-2 px-4 py-2 transition-all rounded-xl ${showTutorial && tutorialStep === 2 ? 'tutorial-target-interactive' : ''}`}
-              style={{
-                background: '#0F172A',
-                color: '#F8FAFC',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                fontWeight: 500
-              }}
+              className={`font-label-caps text-label-caps text-primary-container hover:opacity-80 transition-opacity flex items-center gap-1 ${showTutorial && tutorialStep === 2 ? 'tutorial-target-interactive' : ''}`}
             >
-              <Plus size={14} />
-              Ekle
+              <span className="material-symbols-outlined text-[16px]">add</span> Ekle
             </button>
           </div>
-
+          
           {todayExpenses.length === 0 ? (
-            <div className="text-center py-12" style={{ background: '#FFFFFF', border: '1px dashed #E2E8F0' }}>
-              <div className="font-sans text-sm" style={{ color: '#64748B' }}>
-                Henüz harcama yok
-              </div>
-              <div className="font-sans text-xs mt-1" style={{ color: '#A89678' }}>
-                Yukarıdaki "Ekle" düğmesini kullan
-              </div>
+            <div className="bg-surface-container-lowest rounded-xl shadow-sm p-8 text-center border border-surface-variant border-dashed flex flex-col items-center gap-2">
+              <span className="material-symbols-outlined text-surface-variant text-4xl">receipt_long</span>
+              <span className="font-body-md text-on-surface-variant">Henüz harcama yok</span>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
               {todayExpenses.slice().reverse().map((exp, revIdx) => {
                 const cat = getCategoryInfo(exp.category);
-                const Icon = cat.icon;
-                const realIdx = todayExpenses.length - 1 - revIdx; // gerçek index
+                const realIdx = todayExpenses.length - 1 - revIdx;
+                
+                let msIcon = "receipt_long";
+                if(cat.label === 'Kahve') msIcon = "local_cafe";
+                else if(cat.label === 'Market') msIcon = "shopping_cart";
+                else if(cat.label === 'Ulaşım') msIcon = "directions_car";
+                else if(cat.label === 'Yemek') msIcon = "restaurant";
+                else if(cat.label === 'Alışveriş') msIcon = "local_mall";
+                else if(cat.label === 'Fatura') msIcon = "receipt";
+                else if(cat.label === 'Eğlence') msIcon = "sports_esports";
+                else if(cat.label === 'Sağlık') msIcon = "medical_services";
+                
                 return (
-                  <div key={realIdx} className="slide-up flex items-center gap-3 p-4 mb-2 rounded-2xl shadow-sm" style={{ background: '#FFFFFF', border: '1px solid #F8FAFC' }}>
-                    <div className="w-10 h-10 flex items-center justify-center flex-shrink-0" style={{ background: cat.color, color: '#F8FAFC' }}>
-                      <Icon size={18} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-mono-num text-base" style={{ fontWeight: 500 }}>
-                        {cat.label}
+                  <div key={realIdx} className="flex items-center justify-between p-4 border-b border-surface-container-low hover:bg-surface-bright transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: `${cat.color}20`, color: cat.color }}>
+                        <span className="material-symbols-outlined text-[20px]">{msIcon}</span>
                       </div>
-                      {exp.note && (
-                        <div className="font-sans text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>
-                          {exp.note}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono-num text-lg" style={{ fontWeight: 500 }}>
-                        −{formatCurrency(exp.amount)}
-                      </div>
-                      <div className="font-sans text-xs" style={{ color: '#A89678' }}>
-                        {exp.time}
+                      <div className="flex flex-col">
+                        <span className="font-body-md text-body-md text-on-surface font-medium">{cat.label}</span>
+                        {exp.note && <span className="font-body-sm text-body-sm text-on-surface-variant">{exp.note}</span>}
                       </div>
                     </div>
-                    <button
-                      onClick={() => {
-                        setConfirmDialog({
-                          title: 'Harcamayı sil',
-                          message: 'Bu harcama kalıcı olarak silinecek. Devam edilsin mi?',
-                          onConfirm: () => {
-                            setTodayExpenses(todayExpenses.filter((_, i) => i !== realIdx));
-                            setConfirmDialog(null);
-                          }
-                        });
-                      }}
-                      className="w-7 h-7 flex items-center justify-center transition-all flex-shrink-0"
-                      style={{ border: '1px solid #EF4444', color: '#EF4444' }}
-                      title="Sil"
-                    >
-                      <X size={12} />
-                    </button>
+                    <div className="flex items-center gap-4">
+                      <div className="flex flex-col items-end">
+                        <span className="font-numeric-md text-[18px] text-on-surface">-{formatCurrency(exp.amount)}</span>
+                        <span className="font-body-sm text-[12px] text-on-surface-variant">{exp.time}</span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setConfirmDialog({
+                            title: 'Harcamayı sil',
+                            message: 'Bu harcama kalıcı olarak silinecek. Devam edilsin mi?',
+                            onConfirm: () => {
+                              setTodayExpenses(todayExpenses.filter((_, i) => i !== realIdx));
+                              setConfirmDialog(null);
+                            }
+                          });
+                        }}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-error hover:bg-error-container transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">close</span>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </section>
 
-        {/* End of Day Button */}
-        <button
-          onClick={handleEndDay}
-          className="w-full font-sans py-5 transition-all flex items-center justify-center gap-3 group rounded-2xl shadow-md"
-          style={{
-            background: 'transparent',
-            border: '2px solid #0F172A',
-            color: '#0F172A',
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            fontSize: '12px',
-            fontWeight: 500
-          }}
-        >
-          Günü Bitir
-          <ChevronRight size={16} className="transition-transform group-hover:translate-x-1" />
-        </button>
-
-        {/* Reset link */}
-        <div className="mt-8 text-center">
-          <button
+        {/* Bottom Actions */}
+        <section className="mt-4 mb-stack-lg flex flex-col gap-4">
+          <button 
+            onClick={handleEndDay}
+            className="w-full h-[56px] bg-primary-container text-on-primary rounded-xl font-label-caps text-label-caps uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[20px]">check_circle</span>
+            Günü Bitir
+          </button>
+          <button 
             onClick={handleReset}
-            className="font-sans text-xs underline transition-all"
-            style={{ color: '#A89678', letterSpacing: '0.05em' }}
+            className="text-center font-body-sm text-body-sm text-on-surface-variant hover:text-on-surface transition-colors mt-2 underline"
           >
             Tüm verileri sıfırla
           </button>
-        </div>
-      </div>
+        </section>
+      </main>
+
+      {/* BottomNavBar (Mobile Only) */}
+      <nav className="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-stack-sm pb-safe bg-surface-container-lowest shadow-[0_-4px_24px_rgba(0,0,0,0.02)] rounded-t-xl">
+        <button className="flex flex-col items-center justify-center text-primary-container rounded-xl px-4 py-2">
+          <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>payments</span>
+          <span className="font-body-sm text-body-sm text-[11px] mt-1 font-medium">Bütçe</span>
+        </button>
+        <button onClick={() => setShowInvestment(true)} className={`flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface rounded-xl px-4 py-2 ${showTutorial && tutorialStep === 4 ? 'tutorial-target-interactive' : ''}`}>
+          <span className="material-symbols-outlined text-[24px]">trending_up</span>
+          <span className="font-body-sm text-body-sm text-[11px] mt-1 font-medium">Yatırım</span>
+        </button>
+      </nav>
 
       {/* Calendar Modal */}
       {showCalendar && (() => {

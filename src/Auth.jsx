@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Mail, Lock, ArrowRight, Cloud } from 'lucide-react';
 import { supabase } from './supabase';
 
 export default function Auth() {
@@ -8,10 +7,12 @@ export default function Auth() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null); // { type: 'error'|'success', text: '' }
+  const [showPassword, setShowPassword] = useState(false);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
     if (!email || !password) {
-      setMessage({ type: 'error', text: 'Email ve şifre gerekli.' });
+      setMessage({ type: 'error', text: 'E-posta ve şifre gerekli.' });
       return;
     }
     if (password.length < 6) {
@@ -30,14 +31,10 @@ export default function Auth() {
         });
         if (error) throw error;
         if (data.user && !data.session) {
-          // Email confirmation gerekli
           setMessage({ 
             type: 'success', 
-            text: 'Hesap oluşturuldu! Email adresine bir doğrulama linki gönderildi. Spam klasörünü de kontrol et.' 
+            text: 'Hesap oluşturuldu! E-posta adresinize bir doğrulama linki gönderildi.' 
           });
-        } else if (data.session) {
-          // Direkt giriş yapıldı (confirmation kapalıysa)
-          // App.jsx auth state listener'ı otomatik halleder
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -45,14 +42,12 @@ export default function Auth() {
           password,
         });
         if (error) throw error;
-        // App.jsx auth state listener'ı otomatik halleder
       }
     } catch (err) {
       let msg = err.message || 'Bir hata oluştu.';
-      // Yaygın hatalar için Türkçe çeviri
-      if (msg.includes('Invalid login credentials')) msg = 'Email veya şifre yanlış.';
-      if (msg.includes('User already registered')) msg = 'Bu email zaten kayıtlı. Giriş yapmayı dene.';
-      if (msg.includes('Email not confirmed')) msg = 'Email adresini doğrulaman gerek. Email kutunu (ve spam klasörünü) kontrol et.';
+      if (msg.includes('Invalid login credentials')) msg = 'E-posta veya şifre yanlış.';
+      if (msg.includes('User already registered')) msg = 'Bu e-posta zaten kayıtlı. Giriş yapmayı deneyin.';
+      if (msg.includes('Email not confirmed')) msg = 'E-posta adresinizi doğrulamanız gerekiyor.';
       setMessage({ type: 'error', text: msg });
     } finally {
       setLoading(false);
@@ -66,139 +61,128 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center" style={{
-      fontFamily: "'Fraunces', Georgia, serif",
-      background: 'linear-gradient(135deg, #F5EFE6 0%, #E8DDC9 100%)',
-      color: '#2C2416'
-    }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@300;400;500;600&display=swap');
-        .num-font { font-family: 'Fraunces', serif; }
-        .ui-font { font-family: 'Inter', sans-serif; }
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(15px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-        .delay-1 { animation-delay: 0.1s; }
-        .delay-2 { animation-delay: 0.2s; }
-        .delay-3 { animation-delay: 0.3s; }
-        .delay-4 { animation-delay: 0.4s; }
-      `}</style>
-
-      <div className="w-full max-w-md px-6 py-12">
-        {/* Header */}
-        <div className="fade-up delay-1 mb-10">
-          <div className="flex items-center gap-2 mb-6 ui-font" style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: '#8B7355' }}>
-            <Cloud size={12} />
-            <span>Bulut Senkronizasyonu</span>
+    <div className="min-h-screen w-full flex items-center justify-center p-container-margin">
+      <div className="animate-scale-in w-full max-w-md bg-surface-container-lowest rounded-2xl shadow-sm p-container-margin flex flex-col gap-stack-lg border border-outline-variant/30 relative overflow-hidden">
+        
+        {/* Decorative Ambient Light */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary-container/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+        
+        {/* Header / Brand */}
+        <div className="flex flex-col items-center justify-center gap-stack-sm text-center z-10">
+          <div className="w-16 h-16 bg-surface-container-high rounded-full flex items-center justify-center text-primary-container mb-2">
+            <span className="material-symbols-outlined text-4xl" style={{ fontVariationSettings: "'FILL' 1" }}>account_balance_wallet</span>
           </div>
-          <h1 className="text-5xl mb-3" style={{ fontWeight: 300, lineHeight: 0.95, letterSpacing: '-0.02em' }}>
-            {mode === 'login' ? <>Tekrar <em style={{ fontWeight: 400 }}>hoş geldin</em>.</> : <>Hesabını <em style={{ fontWeight: 400 }}>oluştur</em>.</>}
-          </h1>
-          <p className="ui-font text-sm mt-4" style={{ color: '#5C4F3A', lineHeight: 1.6 }}>
-            {mode === 'login' 
-              ? 'Verilerine her cihazdan erişmek için giriş yap.'
-              : 'Verilerin tüm cihazlarında senkronize olur, hiçbir şey kaybolmaz.'
-            }
-          </p>
+          <h1 className="font-display-tr text-display-tr text-primary">Mali Kontrol</h1>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">Finansal netliğe hoş geldiniz</p>
         </div>
 
-        {/* Email */}
-        <div className="fade-up delay-2 mb-6">
-          <label className="ui-font block mb-2" style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#8B7355', fontWeight: 500 }}>
-            Email
-          </label>
-          <div className="relative">
-            <Mail size={16} className="absolute left-0 top-1/2 -translate-y-1/2" style={{ color: '#8B7355' }} />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="ornek@email.com"
-              className="ui-font w-full bg-transparent border-0 border-b-2 outline-none py-2 pl-7"
-              style={{
-                borderColor: '#2C2416',
-                fontSize: '16px',
-                color: '#2C2416'
-              }}
-              autoComplete="email"
-            />
-          </div>
-        </div>
-
-        {/* Password */}
-        <div className="fade-up delay-3 mb-7">
-          <label className="ui-font block mb-2" style={{ fontSize: '11px', letterSpacing: '0.15em', textTransform: 'uppercase', color: '#8B7355', fontWeight: 500 }}>
-            Şifre <span style={{ fontStyle: 'italic', textTransform: 'none', letterSpacing: 'normal' }}>(en az 6 karakter)</span>
-          </label>
-          <div className="relative">
-            <Lock size={16} className="absolute left-0 top-1/2 -translate-y-1/2" style={{ color: '#8B7355' }} />
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="••••••••"
-              className="ui-font w-full bg-transparent border-0 border-b-2 outline-none py-2 pl-7"
-              style={{
-                borderColor: '#2C2416',
-                fontSize: '16px',
-                color: '#2C2416'
-              }}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            />
-          </div>
+        {/* Toggle Tabs */}
+        <div className="flex bg-surface-container-high rounded-lg p-1 z-10 relative">
+          <button 
+            onClick={() => { setMode('login'); setMessage(null); }}
+            className={`flex-1 py-2 font-label-caps text-label-caps rounded-md transition-all ${mode === 'login' ? 'bg-surface-container-lowest text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+          >
+            Giriş Yap
+          </button>
+          <button 
+            onClick={() => { setMode('signup'); setMessage(null); }}
+            className={`flex-1 py-2 font-label-caps text-label-caps rounded-md transition-all ${mode === 'signup' ? 'bg-surface-container-lowest text-on-surface shadow-sm' : 'text-on-surface-variant hover:text-on-surface'}`}
+          >
+            Kayıt Ol
+          </button>
         </div>
 
         {/* Message */}
         {message && (
-          <div className="mb-5 p-4 ui-font text-sm" style={{
-            background: message.type === 'error' ? 'rgba(232, 155, 127, 0.2)' : 'rgba(168, 208, 141, 0.2)',
-            borderLeft: `3px solid ${message.type === 'error' ? '#C97B5C' : '#7AB05E'}`,
-            color: '#2C2416',
-            lineHeight: 1.5
+          <div className="z-10 p-3 rounded-xl font-body-sm text-body-sm" style={{
+            background: message.type === 'error' ? 'var(--error-container)' : 'var(--surface-container-high)',
+            color: message.type === 'error' ? 'var(--on-error-container)' : 'var(--on-surface)',
+            borderLeft: `4px solid ${message.type === 'error' ? 'var(--error)' : 'var(--primary)'}`
           }}>
             {message.text}
           </div>
         )}
 
-        {/* Submit */}
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="fade-up delay-4 w-full ui-font py-4 transition-all flex items-center justify-center gap-3 group mb-5"
-          style={{
-            background: loading ? '#D4C4A8' : '#2C2416',
-            color: loading ? '#8B7355' : '#F5EFE6',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            letterSpacing: '0.15em',
-            textTransform: 'uppercase',
-            fontSize: '12px',
-            fontWeight: 500
-          }}
-        >
-          {loading ? 'Bekleniyor...' : (mode === 'login' ? 'Giriş Yap' : 'Hesap Oluştur')}
-          {!loading && <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />}
-        </button>
+        {/* Form */}
+        <form className="flex flex-col gap-stack-md z-10" onSubmit={handleSubmit}>
+          
+          {/* Email Field */}
+          <div className="flex flex-col gap-1">
+            <label className="font-label-caps text-label-caps text-on-surface-variant ml-1" htmlFor="email">E-posta</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="material-symbols-outlined text-outline-variant text-xl">mail</span>
+              </div>
+              <input 
+                id="email" 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="ornek@eposta.com" 
+                className="w-full pl-10 pr-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary-container focus:border-primary-container font-body-md text-body-md outline-none transition-all placeholder-on-surface-variant/50" 
+              />
+            </div>
+          </div>
 
-        {/* Mode switch */}
-        <div className="fade-up delay-4 text-center">
-          <button
-            onClick={() => {
-              setMode(mode === 'login' ? 'signup' : 'login');
-              setMessage(null);
-            }}
-            className="ui-font text-sm"
-            style={{ color: '#8B7355' }}
+          {/* Password Field */}
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between items-center ml-1">
+              <label className="font-label-caps text-label-caps text-on-surface-variant" htmlFor="password">Şifre</label>
+              {mode === 'login' && (
+                <a href="#" className="font-label-caps text-label-caps text-primary hover:text-primary-fixed-dim transition-colors">Şifremi Unuttum?</a>
+              )}
+            </div>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <span className="material-symbols-outlined text-outline-variant text-xl">lock</span>
+              </div>
+              <input 
+                id="password" 
+                type={showPassword ? "text" : "password"} 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="••••••••" 
+                className="w-full pl-10 pr-10 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl focus:ring-2 focus:ring-primary-container focus:border-primary-container font-body-md text-body-md outline-none transition-all placeholder-on-surface-variant/50" 
+              />
+              <div 
+                className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                <span className="material-symbols-outlined text-outline-variant hover:text-on-surface transition-colors">
+                  {showPassword ? "visibility" : "visibility_off"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full h-14 mt-2 bg-primary-container text-on-primary rounded-xl font-label-caps text-label-caps flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition-all shadow-sm"
           >
-            {mode === 'login' 
-              ? <>Hesabın yok mu? <span style={{ color: '#2C2416', textDecoration: 'underline', fontWeight: 500 }}>Hesap oluştur</span></>
-              : <>Zaten hesabın var mı? <span style={{ color: '#2C2416', textDecoration: 'underline', fontWeight: 500 }}>Giriş yap</span></>
-            }
+            {loading ? 'Bekleniyor...' : (mode === 'login' ? 'Giriş Yap' : 'Kayıt Ol')}
+            {!loading && <span className="material-symbols-outlined text-xl">arrow_forward</span>}
           </button>
-        </div>
+        </form>
+
+        {/* Alternative Login (Static for UI) */}
+        {mode === 'login' && (
+          <div className="flex flex-col gap-stack-md z-10 mt-2">
+            <div className="relative flex items-center">
+              <div className="flex-grow border-t border-outline-variant/50"></div>
+              <span className="flex-shrink-0 mx-4 font-label-caps text-label-caps text-on-surface-variant">veya şununla devam et</span>
+              <div className="flex-grow border-t border-outline-variant/50"></div>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <button type="button" className="w-14 h-14 bg-surface-container-high rounded-xl flex items-center justify-center hover:bg-surface-container-highest transition-colors border border-outline-variant/30">
+                <svg viewBox="0 0 24 24" width="24" height="24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

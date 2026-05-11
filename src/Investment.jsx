@@ -1,24 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, TrendingUp, TrendingDown, Target, Plus, X, RefreshCw, Search, ArrowUpRight, ArrowDownRight, AlertCircle, Wallet, BarChart3, Activity } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart } from 'recharts';
 
 const COLORS = {
-  bg: '#020617',
-  bgPanel: '#0F172A',
-  bgPanelLight: '#111827',
-  border: '#1E293B',
-  borderLight: '#334155',
-  text: '#94A3B8',
-  textBright: '#E2E8F0',
-  textBrightest: '#F8FAFC',
-  textDim: '#64748B',
-  textDimmer: '#475569',
-  accent: '#00FF85',
-  positive: '#22C55E',
-  negative: '#F43F5E',
+  bg: 'var(--surface-container-lowest)',
+  bgPanel: 'var(--surface-container)',
+  bgPanelLight: 'var(--surface-container-high)',
+  border: 'var(--surface-variant)',
+  borderLight: 'var(--outline-variant)',
+  text: 'var(--on-surface-variant)',
+  textBright: 'var(--on-surface)',
+  textBrightest: 'var(--primary-container)',
+  textDim: 'var(--on-surface-variant)',
+  textDimmer: 'var(--outline)',
+  accent: 'var(--primary-container)',
+  positive: 'var(--primary-container)',
+  negative: 'var(--error)',
   gold: '#FACC15',
-  neon: '#00FF85',
-  softGreen: '#4ADE80'
+  neon: 'var(--primary-container)',
+  softGreen: 'var(--primary)'
 };
 
 const PIE_COLORS = ['#7AE07A', '#5CB85C', '#3D8B3D', '#9FE89F', '#2A6B2A', '#C0F0C0', '#1F4F1F'];
@@ -353,7 +352,7 @@ export default function InvestmentPage({
   const styles = ``; // Styles handled by index.css and tailwind
 
   return (
-    <div className="min-h-screen w-full animate-fade-in transition-all duration-700" style={{ background: COLORS.bg, color: COLORS.text, fontFamily: "'Inter', sans-serif" }}>
+    <div className="dark min-h-screen w-full animate-fade-in transition-all duration-700" style={{ background: COLORS.bg, color: COLORS.text, fontFamily: "'Inter', sans-serif" }}>
       <style>{styles}</style>
       <div className="max-w-4xl mx-auto px-4 sm:px-5 py-6 md:py-10">
         <div className="flex items-center justify-between mb-8">
