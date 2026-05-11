@@ -3,20 +3,22 @@ import { ArrowLeft, TrendingUp, TrendingDown, Target, Plus, X, RefreshCw, Search
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart } from 'recharts';
 
 const COLORS = {
-  bg: '#000000',
-  bgPanel: '#050D05',
-  bgPanelLight: '#0A1A0A',
-  border: '#1F3A1F',
-  borderLight: '#2D5A2D',
-  text: '#7AE07A',
-  textBright: '#A8E6A1',
-  textBrightest: '#D4F4D0',
-  textDim: '#3D6B3D',
-  textDimmer: '#2A4A2A',
-  accent: '#7AE07A',
-  positive: '#7AE07A',
-  negative: '#FF6B6B',
-  gold: '#FFD700',
+  bg: '#020617',
+  bgPanel: '#0F172A',
+  bgPanelLight: '#111827',
+  border: '#1E293B',
+  borderLight: '#334155',
+  text: '#94A3B8',
+  textBright: '#E2E8F0',
+  textBrightest: '#F8FAFC',
+  textDim: '#64748B',
+  textDimmer: '#475569',
+  accent: '#00FF85',
+  positive: '#22C55E',
+  negative: '#F43F5E',
+  gold: '#FACC15',
+  neon: '#00FF85',
+  softGreen: '#4ADE80'
 };
 
 const PIE_COLORS = ['#7AE07A', '#5CB85C', '#3D8B3D', '#9FE89F', '#2A6B2A', '#C0F0C0', '#1F4F1F'];
@@ -338,35 +340,15 @@ export default function InvestmentPage({
     { title: 'Vergileri Unutma', icon: '◗', body: 'Türkiye\'de yatırım gelirinin vergilendirme rejimini bil: hisse, kripto, döviz, kira gelirinin vergisi farklıdır.' }
   ];
 
-  const styles = `
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap');
-    .num-font { font-family: 'JetBrains Mono', monospace; font-feature-settings: 'tnum'; }
-    .ui-font { font-family: 'Inter', sans-serif; }
-    .display-font { font-family: 'Fraunces', serif; }
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    .fade-up { animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
-    .delay-1 { animation-delay: 0.05s; } .delay-2 { animation-delay: 0.1s; }
-    .delay-3 { animation-delay: 0.15s; } .delay-4 { animation-delay: 0.2s; }
-    .delay-5 { animation-delay: 0.25s; } .delay-6 { animation-delay: 0.3s; }
-    .delay-7 { animation-delay: 0.35s; } .delay-8 { animation-delay: 0.4s; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spin { animation: spin 1.5s linear infinite; }
-    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    .pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
-    @keyframes scaleIn { from { opacity: 0; transform: scale(0.97); } to { opacity: 1; transform: scale(1); } }
-    .scale-in { animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .number-input::-webkit-outer-spin-button, .number-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-    .number-input { -moz-appearance: textfield; }
-    .recharts-tooltip-wrapper { outline: none !important; }
-  `;
+  const styles = ``; // Styles handled by index.css and tailwind
 
   return (
-    <div className="min-h-screen w-full" style={{ background: COLORS.bg, color: COLORS.text, fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen w-full animate-fade-in transition-all duration-700" style={{ background: COLORS.bg, color: COLORS.text, fontFamily: "'Inter', sans-serif" }}>
       <style>{styles}</style>
       <div className="max-w-4xl mx-auto px-4 sm:px-5 py-6 md:py-10">
         <div className="flex items-center justify-between mb-8">
           <button onClick={onClose} className="ui-font flex items-center gap-2 text-xs px-3 py-2 transition-all"
-            style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright, background: COLORS.bgPanel, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 500 }}>
+            style={{ border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', color: COLORS.textBright, background: COLORS.bgPanel, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 500 }}>
             <ArrowLeft size={13} /><span className="hidden sm:inline">Bütçeye Dön</span><span className="sm:hidden">Geri</span>
           </button>
           <div className="flex items-center gap-2 ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.15em' }}>
@@ -375,14 +357,14 @@ export default function InvestmentPage({
           </div>
         </div>
 
-        <div className="fade-up delay-1 mb-6">
+        <div className="animate-fade-up delay-1 mb-6">
           <div className="ui-font text-xs mb-3" style={{ color: COLORS.textDim, letterSpacing: '0.3em', textTransform: 'uppercase' }}>▌Yatırım Terminali</div>
-          <h1 className="display-font text-4xl md:text-5xl" style={{ fontWeight: 300, letterSpacing: '-0.02em', lineHeight: 1, color: COLORS.textBrightest }}>
+          <h1 className="display-font text-4xl md:text-5xl transition-all duration-500 hover:neon-text-glow" style={{ fontWeight: 300, letterSpacing: '-0.02em', lineHeight: 1, color: COLORS.textBrightest }}>
             <em style={{ fontWeight: 400, color: COLORS.accent }}>Mali</em> durumun.
           </h1>
         </div>
 
-        <div className="fade-up delay-2 grid grid-cols-4 gap-1 mb-6 p-1" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+        <div className="animate-fade-up delay-2 grid grid-cols-4 gap-1 mb-6 p-1" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
           {[
             { id: 'portfolio', label: 'Mali Durum', icon: Wallet },
             { id: 'market', label: 'Piyasa', icon: BarChart3 },
@@ -392,7 +374,7 @@ export default function InvestmentPage({
             const Icon = tab.icon; const isActive = activeTab === tab.id;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="ui-font flex items-center justify-center gap-1.5 py-2.5 transition-all"
-                style={{ background: isActive ? COLORS.accent : 'transparent', color: isActive ? COLORS.bg : COLORS.textBright, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '10px', fontWeight: 600 }}>
+                className={`ui-font flex items-center justify-center gap-1.5 py-2.5 transition-all duration-300 rounded-lg ${isActive ? 'neon-border-glow' : 'hover:bg-slate-800'}`} style={{ background: isActive ? 'rgba(0, 255, 133, 0.1)' : 'transparent', color: isActive ? COLORS.bg : COLORS.textBright, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '10px', fontWeight: 600 }}>
                 <Icon size={11} /><span className="hidden sm:inline">{tab.label}</span>
               </button>
             );
@@ -402,7 +384,7 @@ export default function InvestmentPage({
         {/* PORTFOLIO TAB */}
         {activeTab === 'portfolio' && (
           <div>
-            <div className="fade-up delay-3 mb-6 p-6 md:p-7" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.accent}` }}>
+            <div className="animate-fade-up delay-3 mb-6 p-6 md:p-7" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', borderLeft: `3px solid ${COLORS.accent}` }}>
               <div className="ui-font text-xs mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Toplam Portföy Değeri</div>
               <div className="num-font text-4xl md:text-5xl mb-3" style={{ color: COLORS.textBrightest, fontWeight: 500, letterSpacing: '-0.02em' }}>
                 {formatCurrency(portfolioValues.totalValue)}
@@ -419,7 +401,7 @@ export default function InvestmentPage({
             </div>
 
             {periodPerformance && periodPerformance.some(p => p.changePct !== null) && (
-              <div className="fade-up delay-4 mb-6 p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+              <div className="animate-fade-up delay-4 mb-6 p-4" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="ui-font text-xs mb-3" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Dönemsel Performans</div>
                 <div className="grid grid-cols-5 gap-2">
                   {periodPerformance.map(p => (
@@ -437,7 +419,7 @@ export default function InvestmentPage({
             )}
 
             {chartData.length > 1 && (
-              <div className="fade-up delay-4 mb-6 p-5" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+              <div className="animate-fade-up delay-4 mb-6 p-5" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Değer Geçmişi</div>
                   <div className="flex gap-1">
@@ -462,7 +444,7 @@ export default function InvestmentPage({
                         tickFormatter={(v) => { const d = new Date(v); return `${d.getDate()}/${d.getMonth() + 1}`; }} />
                       <YAxis stroke={COLORS.textDim} fontSize={10} tick={{ fill: COLORS.textDim }}
                         tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}K` : v} />
-                      <Tooltip contentStyle={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright, fontFamily: 'JetBrains Mono, monospace', fontSize: '11px' }}
+                      <Tooltip contentStyle={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', color: COLORS.textBright, fontFamily: 'JetBrains Mono, monospace', fontSize: '11px' }}
                         labelFormatter={(v) => new Date(v).toLocaleDateString('tr-TR')}
                         formatter={(v) => [formatCurrency(v), 'Değer']} />
                       <Area type="monotone" dataKey="value" stroke={COLORS.accent} strokeWidth={2} fill="url(#valueGrad)" />
@@ -478,7 +460,7 @@ export default function InvestmentPage({
             )}
 
             {portfolioValues.items.length > 0 && (
-              <div className="fade-up delay-5 mb-6 p-5" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+              <div className="animate-fade-up delay-5 mb-6 p-5" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="ui-font text-xs mb-4" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Varlık Dağılımı</div>
                 <div className="grid md:grid-cols-2 gap-4 items-center">
                   <div style={{ width: '100%', height: 180 }}>
@@ -487,7 +469,7 @@ export default function InvestmentPage({
                         <Pie data={pieData} cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2} dataKey="value">
                           {pieData.map((entry, idx) => (<Cell key={idx} fill={entry.color} stroke={COLORS.bg} strokeWidth={2} />))}
                         </Pie>
-                        <Tooltip contentStyle={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright, fontFamily: 'JetBrains Mono, monospace', fontSize: '11px' }}
+                        <Tooltip contentStyle={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', color: COLORS.textBright, fontFamily: 'JetBrains Mono, monospace', fontSize: '11px' }}
                           formatter={(v) => formatCurrency(v)} />
                       </PieChart>
                     </ResponsiveContainer>
@@ -508,7 +490,7 @@ export default function InvestmentPage({
               </div>
             )}
 
-            <div className="fade-up delay-6 mb-6">
+            <div className="animate-fade-up delay-6 mb-6">
               <div className="flex items-center justify-between mb-3">
                 <div className="ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
                   Varlıklar ({portfolioValues.items.length})
@@ -528,7 +510,7 @@ export default function InvestmentPage({
               ) : (
                 <div className="space-y-2">
                   {portfolioValues.items.map(item => (
-                    <div key={item.assetId} className="p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+                    <div key={item.assetId} className="p-4" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="min-w-0">
                           <div className="display-font text-base mb-0.5" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{item.asset.name}</div>
@@ -557,7 +539,7 @@ export default function InvestmentPage({
             </div>
 
             {transactions.length > 0 && (
-              <div className="fade-up delay-7 mb-6">
+              <div className="animate-fade-up delay-7 mb-6">
                 <div className="ui-font text-xs mb-3" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
                   İşlem Geçmişi ({transactions.length})
                 </div>
@@ -567,7 +549,7 @@ export default function InvestmentPage({
                     if (!asset) return null;
                     const isBuy = tx.type === 'buy';
                     return (
-                      <div key={tx.id} className="flex items-center gap-3 p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+                      <div key={tx.id} className="flex items-center gap-3 p-3" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                         <div className="w-8 h-8 flex items-center justify-center flex-shrink-0" style={{ background: isBuy ? 'rgba(122, 224, 122, 0.1)' : 'rgba(255, 107, 107, 0.1)', border: `1px solid ${isBuy ? COLORS.borderLight : '#5A2A2A'}`, color: isBuy ? COLORS.positive : COLORS.negative }}>
                           {isBuy ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
                         </div>
@@ -582,10 +564,10 @@ export default function InvestmentPage({
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          <button onClick={() => openTxModal(tx)} className="w-6 h-6 flex items-center justify-center" style={{ border: `1px solid ${COLORS.border}`, color: COLORS.textBright }}>
+                          <button onClick={() => openTxModal(tx)} className="w-6 h-6 flex items-center justify-center" style={{ border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBright }}>
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                           </button>
-                          <button onClick={() => deleteTx(tx.id)} className="w-6 h-6 flex items-center justify-center" style={{ border: '1px solid #5A2A2A', color: COLORS.negative }}>
+                          <button onClick={() => deleteTx(tx.id)} className="w-6 h-6 flex items-center justify-center" style={{ border: '1px solid #F43F5E', borderRadius: '6px', color: COLORS.negative }}>
                             <X size={10} />
                           </button>
                         </div>
@@ -597,7 +579,7 @@ export default function InvestmentPage({
             )}
 
             {monthlyInvestmentBudget > 0 && (
-              <div className="fade-up delay-8 mb-6 p-5" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+              <div className="animate-fade-up delay-8 mb-6 p-5" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="ui-font text-xs mb-3" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Aylık Yatırım Bütçen</div>
                 <div className="num-font text-2xl mb-2" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{formatCurrency(monthlyInvestmentBudget)}</div>
                 <div className="ui-font text-xs" style={{ color: COLORS.textDim, lineHeight: 1.5 }}>
@@ -621,14 +603,14 @@ export default function InvestmentPage({
                   <Plus size={11} />Coin Ekle
                 </button>
                 <button onClick={fetchPrices} disabled={pricesLoading} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
-                  style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright, background: 'transparent', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>
+                  style={{ border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', color: COLORS.textBright, background: 'transparent', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>
                   <RefreshCw size={11} className={pricesLoading ? 'spin' : ''} />Yenile
                 </button>
               </div>
             </div>
 
             {pricesError && (
-              <div className="p-4 mb-5 ui-font text-sm flex items-start gap-2" style={{ background: 'rgba(255, 107, 107, 0.05)', border: '1px solid #5A2A2A', color: COLORS.negative }}>
+              <div className="p-4 mb-5 ui-font text-sm flex items-start gap-2" style={{ background: 'rgba(255, 107, 107, 0.05)', border: '1px solid #F43F5E', borderRadius: '6px', color: COLORS.negative }}>
                 <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />{pricesError}
               </div>
             )}
@@ -640,7 +622,7 @@ export default function InvestmentPage({
                 const isCustom = !DEFAULT_ASSETS.some(d => d.id === asset.id);
                 return (
                   <div key={asset.id} className={`fade-up delay-${Math.min(idx + 1, 8)} p-4`}
-                    style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.accent}` }}>
+                    className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', borderLeft: `3px solid ${COLORS.accent}` }}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="num-font text-xs mb-0.5" style={{ color: COLORS.textDim, letterSpacing: '0.1em' }}>{asset.symbol}</div>
@@ -659,7 +641,7 @@ export default function InvestmentPage({
                       </div>
                       {isCustom && (
                         <button onClick={() => onUpdateWatchedAssets(watchedAssets.filter(a => a.id !== asset.id))} className="w-6 h-6 flex items-center justify-center flex-shrink-0"
-                          style={{ border: '1px solid #5A2A2A', color: COLORS.negative }} title="Kaldır">
+                          style={{ border: '1px solid #F43F5E', borderRadius: '6px', color: COLORS.negative }} title="Kaldır">
                           <X size={10} />
                         </button>
                       )}
@@ -704,7 +686,7 @@ export default function InvestmentPage({
                   const isComplete = pct >= 100;
                   return (
                     <div key={goal.id} className={`fade-up delay-${Math.min(idx + 1, 7)} p-5`}
-                      style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${isComplete ? COLORS.gold : COLORS.accent}` }}>
+                      style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', borderLeft: `3px solid ${isComplete ? COLORS.gold : COLORS.accent}` }}>
                       <div className="flex items-start justify-between mb-3 gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="display-font text-xl mb-1" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{goal.name}</div>
@@ -716,10 +698,10 @@ export default function InvestmentPage({
                         </div>
                         <div className="flex gap-1 flex-shrink-0">
                           <button onClick={() => { setEditingGoalId(goal.id); setGoalName(goal.name); setGoalAmount(goal.target.toString()); setGoalCurrent((goal.current || 0).toString()); setGoalPeriod(goal.period || 'yearly'); setShowGoalModal(true); }}
-                            className="w-7 h-7 flex items-center justify-center" style={{ border: `1px solid ${COLORS.border}`, color: COLORS.textBright }}>
+                            className="w-7 h-7 flex items-center justify-center" style={{ border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBright }}>
                             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                           </button>
-                          <button onClick={() => onUpdateGoals(investmentGoals.filter(g => g.id !== goal.id))} className="w-7 h-7 flex items-center justify-center" style={{ border: '1px solid #5A2A2A', color: COLORS.negative }}>
+                          <button onClick={() => onUpdateGoals(investmentGoals.filter(g => g.id !== goal.id))} className="w-7 h-7 flex items-center justify-center" style={{ border: '1px solid #F43F5E', borderRadius: '6px', color: COLORS.negative }}>
                             <X size={11} />
                           </button>
                         </div>
@@ -747,7 +729,7 @@ export default function InvestmentPage({
         {activeTab === 'tips' && (
           <div className="space-y-3">
             {tips.map((tip, idx) => (
-              <div key={idx} className={`fade-up delay-${Math.min(idx + 1, 7)} p-5`} style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+              <div key={idx} className={`fade-up delay-${Math.min(idx + 1, 7)} p-5`} className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="flex items-start gap-4">
                   <div className="display-font text-3xl flex-shrink-0" style={{ color: COLORS.accent, lineHeight: 1 }}>{tip.icon}</div>
                   <div className="min-w-0 flex-1">
@@ -767,18 +749,18 @@ export default function InvestmentPage({
       {/* TX MODAL */}
       {showTxModal && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6" style={{ background: 'rgba(0,0,0,0.9)' }} onClick={() => setShowTxModal(false)}>
-          <div className="scale-in w-full max-w-md p-6 md:p-7" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="scale-in w-full max-w-md p-6 md:p-7" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="ui-font text-xs mb-1" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>{editingTx ? 'Düzenle' : 'Yeni İşlem'}</div>
                 <h3 className="display-font text-xl" style={{ color: COLORS.textBrightest, fontWeight: 400 }}>Al veya <em style={{ color: COLORS.accent }}>sat</em></h3>
               </div>
-              <button onClick={() => setShowTxModal(false)} className="w-8 h-8 flex items-center justify-center" style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright }}>
+              <button onClick={() => setShowTxModal(false)} className="w-8 h-8 flex items-center justify-center" style={{ border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', color: COLORS.textBright }}>
                 <X size={14} />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-1 mb-5 p-1" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+            <div className="grid grid-cols-2 gap-1 mb-5 p-1" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
               <button onClick={() => setTxType('buy')} className="ui-font py-2.5"
                 style={{ background: txType === 'buy' ? COLORS.positive : 'transparent', color: txType === 'buy' ? COLORS.bg : COLORS.textBright, fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>ALIŞ</button>
               <button onClick={() => setTxType('sell')} className="ui-font py-2.5"
@@ -788,7 +770,7 @@ export default function InvestmentPage({
             <div className="mb-4">
               <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Varlık</label>
               <select value={txAssetId} onChange={(e) => { setTxAssetId(e.target.value); const p = prices[e.target.value]?.try; if (p && !txPrice) setTxPrice(p.toFixed(2)); }}
-                className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBright, fontSize: '14px' }}>
+                className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBright, fontSize: '14px' }}>
                 <option value="">Seç...</option>
                 {allAssets.map(a => (<option key={a.id} value={a.id} style={{ background: COLORS.bgPanel }}>{a.symbol} — {a.name}</option>))}
               </select>
@@ -797,7 +779,7 @@ export default function InvestmentPage({
             <div className="mb-4">
               <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Miktar</label>
               <input type="number" value={txAmount} onChange={(e) => setTxAmount(e.target.value)} placeholder="0" step="any"
-                className="number-input ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBrightest, fontSize: '20px' }} />
+                className="number-input ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBrightest, fontSize: '20px' }} />
             </div>
 
             <div className="mb-4">
@@ -810,17 +792,17 @@ export default function InvestmentPage({
                 )}
               </label>
               <input type="number" value={txPrice} onChange={(e) => setTxPrice(e.target.value)} placeholder="0" step="any"
-                className="number-input ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBrightest, fontSize: '20px' }} />
+                className="number-input ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBrightest, fontSize: '20px' }} />
             </div>
 
             <div className="mb-5">
               <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Tarih</label>
               <input type="date" value={txDate} onChange={(e) => setTxDate(e.target.value)}
-                className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBright, fontSize: '14px', colorScheme: 'dark' }} />
+                className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBright, fontSize: '14px', colorScheme: 'dark' }} />
             </div>
 
             {txAmount && txPrice && (
-              <div className="mb-5 p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+              <div className="mb-5 p-3" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="ui-font text-xs mb-1" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Toplam</div>
                 <div className="num-font text-xl" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{formatCurrency(parseFloat(txAmount) * parseFloat(txPrice))}</div>
               </div>
@@ -842,13 +824,13 @@ export default function InvestmentPage({
       {/* ADD ASSET MODAL */}
       {showAddAssetModal && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6" style={{ background: 'rgba(0,0,0,0.9)' }} onClick={() => setShowAddAssetModal(false)}>
-          <div className="scale-in w-full max-w-md p-6 md:p-7" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="scale-in w-full max-w-md p-6 md:p-7" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div>
                 <div className="ui-font text-xs mb-1" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Coin Ekle</div>
                 <h3 className="display-font text-xl" style={{ color: COLORS.textBrightest, fontWeight: 400 }}>Piyasaya <em style={{ color: COLORS.accent }}>ekle</em></h3>
               </div>
-              <button onClick={() => setShowAddAssetModal(false)} className="w-8 h-8 flex items-center justify-center" style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright }}>
+              <button onClick={() => setShowAddAssetModal(false)} className="w-8 h-8 flex items-center justify-center" style={{ border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', color: COLORS.textBright }}>
                 <X size={14} />
               </button>
             </div>
@@ -856,7 +838,7 @@ export default function InvestmentPage({
             <div className="relative mb-4">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: COLORS.textDim }} />
               <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="örn: avalanche, cardano, dogecoin..." autoFocus
-                className="ui-font w-full pl-10 p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBrightest, fontSize: '14px' }} />
+                className="ui-font w-full pl-10 p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBrightest, fontSize: '14px' }} />
             </div>
 
             {searching && <div className="text-center py-4 ui-font text-xs" style={{ color: COLORS.textDim }}>Aranıyor...</div>}
@@ -867,7 +849,7 @@ export default function InvestmentPage({
                 return (
                   <button key={coin.id} onClick={() => !alreadyAdded && addCoinToWatchlist(coin)} disabled={alreadyAdded}
                     className="w-full flex items-center gap-3 p-3 transition-all text-left"
-                    style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, opacity: alreadyAdded ? 0.5 : 1, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}>
+                    style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', opacity: alreadyAdded ? 0.5 : 1, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}>
                     {coin.thumb && <img src={coin.thumb} alt="" className="w-7 h-7 flex-shrink-0" />}
                     <div className="flex-1 min-w-0">
                       <div className="ui-font text-sm" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{coin.name}</div>
@@ -897,13 +879,13 @@ export default function InvestmentPage({
       {/* GOAL MODAL */}
       {showGoalModal && (
         <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6" style={{ background: 'rgba(0,0,0,0.9)' }} onClick={() => setShowGoalModal(false)}>
-          <div className="scale-in w-full max-w-md p-6 md:p-7" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="scale-in w-full max-w-md p-6 md:p-7" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="ui-font text-xs mb-1" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>{editingGoalId ? 'Düzenle' : 'Yeni'}</div>
                 <h3 className="display-font text-xl" style={{ color: COLORS.textBrightest, fontWeight: 400 }}>Yatırım <em style={{ color: COLORS.accent }}>hedefi</em></h3>
               </div>
-              <button onClick={() => setShowGoalModal(false)} className="w-8 h-8 flex items-center justify-center" style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright }}>
+              <button onClick={() => setShowGoalModal(false)} className="w-8 h-8 flex items-center justify-center" style={{ border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', color: COLORS.textBright }}>
                 <X size={14} />
               </button>
             </div>
@@ -911,13 +893,13 @@ export default function InvestmentPage({
             <div className="mb-4">
               <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Ad</label>
               <input type="text" value={goalName} onChange={(e) => setGoalName(e.target.value)} placeholder="Örn: Emeklilik fonu" autoFocus
-                className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBrightest, fontSize: '14px' }} />
+                className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBrightest, fontSize: '14px' }} />
             </div>
 
             <div className="mb-4">
               <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Hedef Tutar (₺)</label>
               <input type="number" value={goalAmount} onChange={(e) => setGoalAmount(e.target.value)} placeholder="100000"
-                className="number-input ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBrightest, fontSize: '20px' }} />
+                className="number-input ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBrightest, fontSize: '20px' }} />
             </div>
 
             <div className="mb-4">
@@ -925,12 +907,12 @@ export default function InvestmentPage({
                 Mevcut <span style={{ textTransform: 'none', letterSpacing: 'normal', fontStyle: 'italic' }}>(boş = portföye bağlanır)</span>
               </label>
               <input type="number" value={goalCurrent} onChange={(e) => setGoalCurrent(e.target.value)} placeholder="0"
-                className="number-input ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBright, fontSize: '16px' }} />
+                className="number-input ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', color: COLORS.textBright, fontSize: '16px' }} />
             </div>
 
             <div className="mb-6">
               <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Periyot</label>
-              <div className="grid grid-cols-2 gap-1 p-1" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+              <div className="grid grid-cols-2 gap-1 p-1" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <button onClick={() => setGoalPeriod('monthly')} className="ui-font py-2"
                   style={{ background: goalPeriod === 'monthly' ? COLORS.accent : 'transparent', color: goalPeriod === 'monthly' ? COLORS.bg : COLORS.textBright, fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Aylık</button>
                 <button onClick={() => setGoalPeriod('yearly')} className="ui-font py-2"
@@ -949,12 +931,12 @@ export default function InvestmentPage({
       {/* CONFIRM DIALOG */}
       {confirmDialog && (
         <div className="fixed inset-0 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.9)', zIndex: 100 }} onClick={() => setConfirmDialog(null)}>
-          <div className="w-full max-w-sm p-6" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}` }} onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-sm p-6" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px' }} onClick={(e) => e.stopPropagation()}>
             <div className="ui-font text-xs mb-2" style={{ color: COLORS.negative, letterSpacing: '0.2em', textTransform: 'uppercase', fontWeight: 600 }}>Onay Gerekli</div>
             <h3 className="display-font text-xl mb-3" style={{ color: COLORS.textBrightest, fontWeight: 400 }}>{confirmDialog.title}</h3>
             <p className="ui-font text-sm mb-6" style={{ color: COLORS.textBright, lineHeight: 1.5 }}>{confirmDialog.message}</p>
             <div className="flex gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="flex-1 ui-font py-3" style={{ background: 'transparent', border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '11px', fontWeight: 500 }}>Vazgeç</button>
+              <button onClick={() => setConfirmDialog(null)} className="flex-1 ui-font py-3" style={{ background: 'transparent', border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', color: COLORS.textBright, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '11px', fontWeight: 500 }}>Vazgeç</button>
               <button onClick={confirmDialog.onConfirm} className="flex-1 ui-font py-3" style={{ background: COLORS.negative, color: '#FFFFFF', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '11px', fontWeight: 600 }}>Sil</button>
             </div>
           </div>
