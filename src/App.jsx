@@ -907,6 +907,9 @@ const handleLogout = async () => {
             <button onClick={() => { setCalendarMonth(new Date().getMonth()); setCalendarYear(new Date().getFullYear()); setShowCalendar(true); }} aria-label="Takvim" className={`w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary ${showTutorial && tutorialStep === 3 ? 'tutorial-target-interactive' : ''}`}>
               <span className="material-symbols-outlined">event</span>
             </button>
+            <button onClick={() => setShowInvestment(true)} aria-label="Yatırım" className="hidden md:flex w-10 h-10 items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary" title="Yatırım Terminali">
+              <span className="material-symbols-outlined">trending_up</span>
+            </button>
             <button onClick={() => setStep('setup')} aria-label="Ayarlar" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary">
               <span className="material-symbols-outlined">settings</span>
             </button>
