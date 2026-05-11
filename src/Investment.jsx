@@ -51,6 +51,7 @@ export default function InvestmentPage({
   const [pricesError, setPricesError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [chartPeriod, setChartPeriod] = useState('30d');
+  const [displayCurrency, setDisplayCurrency] = useState('TRY');
   
   const [showTxModal, setShowTxModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
@@ -125,7 +126,7 @@ export default function InvestmentPage({
 
   useEffect(() => {
     fetchPrices();
-    const interval = setInterval(fetchPrices, 5 * 60 * 1000);
+    const interval = setInterval(fetchPrices, 1 * 60 * 1000);
     return () => clearInterval(interval);
   }, [allAssets.length]);
 
@@ -236,10 +237,19 @@ export default function InvestmentPage({
 
   const formatCurrency = (val, maxDigits) => {
     if (val === null || val === undefined || isNaN(val)) return '—';
+    let convertedVal = val;
+    let curr = 'TRY';
+    if (displayCurrency === 'USD' && prices.usd?.try) {
+      convertedVal = val / prices.usd.try;
+      curr = 'USD';
+    } else if (displayCurrency === 'EUR' && prices.eur?.try) {
+      convertedVal = val / prices.eur.try;
+      curr = 'EUR';
+    }
     return new Intl.NumberFormat('tr-TR', {
-      style: 'currency', currency: 'TRY',
-      maximumFractionDigits: maxDigits !== undefined ? maxDigits : (Math.abs(val) > 100 ? 0 : 2)
-    }).format(val);
+      style: 'currency', currency: curr,
+      maximumFractionDigits: maxDigits !== undefined ? maxDigits : (Math.abs(convertedVal) > 100 ? 0 : 2)
+    }).format(convertedVal);
   };
   const formatAmount = (val) => {
     if (val === null || val === undefined || isNaN(val)) return '—';
@@ -351,9 +361,28 @@ export default function InvestmentPage({
             style={{ border: `1px solid ${COLORS.borderLight}`, borderRadius: '8px', color: COLORS.textBright, background: COLORS.bgPanel, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 500 }}>
             <ArrowLeft size={13} /><span className="hidden sm:inline">Bütçeye Dön</span><span className="sm:hidden">Geri</span>
           </button>
-          <div className="flex items-center gap-2 ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.15em' }}>
-            <div className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: COLORS.accent }}></div>
-            <span>CANLI</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center p-0.5" style={{ background: COLORS.bgPanelLight, borderRadius: '6px', border: `1px solid ${COLORS.border}` }}>
+              {['TRY', 'USD', 'EUR'].map(c => (
+                <button 
+                  key={c}
+                  onClick={() => setDisplayCurrency(c)}
+                  className="ui-font text-xs px-2.5 py-1 transition-all"
+                  style={{
+                    background: displayCurrency === c ? COLORS.accent : 'transparent',
+                    color: displayCurrency === c ? COLORS.bg : COLORS.textDim,
+                    borderRadius: '4px',
+                    fontWeight: displayCurrency === c ? 600 : 400
+                  }}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 ui-font text-xs hidden sm:flex" style={{ color: COLORS.textDim, letterSpacing: '0.15em' }}>
+              <div className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: COLORS.accent }}></div>
+              <span>CANLI</span>
+            </div>
           </div>
         </div>
 
@@ -364,7 +393,7 @@ export default function InvestmentPage({
           </h1>
         </div>
 
-        <div className="animate-fade-up delay-2 grid grid-cols-4 gap-1 mb-6 p-1" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+        <div className="animate-fade-up delay-2 grid grid-cols-4 gap-1 mb-6 p-1 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
           {[
             { id: 'portfolio', label: 'Mali Durum', icon: Wallet },
             { id: 'market', label: 'Piyasa', icon: BarChart3 },
@@ -373,8 +402,7 @@ export default function InvestmentPage({
           ].map(tab => {
             const Icon = tab.icon; const isActive = activeTab === tab.id;
             return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="ui-font flex items-center justify-center gap-1.5 py-2.5 transition-all"
-                className={`ui-font flex items-center justify-center gap-1.5 py-2.5 transition-all duration-300 rounded-lg ${isActive ? 'neon-border-glow' : 'hover:bg-slate-800'}`} style={{ background: isActive ? 'rgba(0, 255, 133, 0.1)' : 'transparent', color: isActive ? COLORS.bg : COLORS.textBright, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '10px', fontWeight: 600 }}>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`ui-font flex items-center justify-center gap-1.5 py-2.5 transition-all ui-font flex items-center justify-center gap-1.5 py-2.5 transition-all duration-300 rounded-lg ${isActive ? 'neon-border-glow' : 'hover:bg-slate-800'}`} style={{ background: isActive ? 'rgba(0, 255, 133, 0.1)' : 'transparent', color: isActive ? COLORS.bg : COLORS.textBright, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '10px', fontWeight: 600 }}>
                 <Icon size={11} /><span className="hidden sm:inline">{tab.label}</span>
               </button>
             );
@@ -384,7 +412,7 @@ export default function InvestmentPage({
         {/* PORTFOLIO TAB */}
         {activeTab === 'portfolio' && (
           <div>
-            <div className="animate-fade-up delay-3 mb-6 p-6 md:p-7" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', borderLeft: `3px solid ${COLORS.accent}` }}>
+            <div className="animate-fade-up delay-3 mb-6 p-6 md:p-7 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', borderLeft: `3px solid ${COLORS.accent}` }}>
               <div className="ui-font text-xs mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Toplam Portföy Değeri</div>
               <div className="num-font text-4xl md:text-5xl mb-3" style={{ color: COLORS.textBrightest, fontWeight: 500, letterSpacing: '-0.02em' }}>
                 {formatCurrency(portfolioValues.totalValue)}
@@ -401,7 +429,7 @@ export default function InvestmentPage({
             </div>
 
             {periodPerformance && periodPerformance.some(p => p.changePct !== null) && (
-              <div className="animate-fade-up delay-4 mb-6 p-4" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+              <div className="animate-fade-up delay-4 mb-6 p-4 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="ui-font text-xs mb-3" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Dönemsel Performans</div>
                 <div className="grid grid-cols-5 gap-2">
                   {periodPerformance.map(p => (
@@ -419,7 +447,7 @@ export default function InvestmentPage({
             )}
 
             {chartData.length > 1 && (
-              <div className="animate-fade-up delay-4 mb-6 p-5" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+              <div className="animate-fade-up delay-4 mb-6 p-5 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Değer Geçmişi</div>
                   <div className="flex gap-1">
@@ -460,7 +488,7 @@ export default function InvestmentPage({
             )}
 
             {portfolioValues.items.length > 0 && (
-              <div className="animate-fade-up delay-5 mb-6 p-5" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+              <div className="animate-fade-up delay-5 mb-6 p-5 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="ui-font text-xs mb-4" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Varlık Dağılımı</div>
                 <div className="grid md:grid-cols-2 gap-4 items-center">
                   <div style={{ width: '100%', height: 180 }}>
@@ -510,7 +538,7 @@ export default function InvestmentPage({
               ) : (
                 <div className="space-y-2">
                   {portfolioValues.items.map(item => (
-                    <div key={item.assetId} className="p-4" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+                    <div key={item.assetId} className="p-4 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="min-w-0">
                           <div className="display-font text-base mb-0.5" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{item.asset.name}</div>
@@ -549,7 +577,7 @@ export default function InvestmentPage({
                     if (!asset) return null;
                     const isBuy = tx.type === 'buy';
                     return (
-                      <div key={tx.id} className="flex items-center gap-3 p-3" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+                      <div key={tx.id} className="flex items-center gap-3 p-3 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                         <div className="w-8 h-8 flex items-center justify-center flex-shrink-0" style={{ background: isBuy ? 'rgba(122, 224, 122, 0.1)' : 'rgba(255, 107, 107, 0.1)', border: `1px solid ${isBuy ? COLORS.borderLight : '#5A2A2A'}`, color: isBuy ? COLORS.positive : COLORS.negative }}>
                           {isBuy ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
                         </div>
@@ -579,7 +607,7 @@ export default function InvestmentPage({
             )}
 
             {monthlyInvestmentBudget > 0 && (
-              <div className="animate-fade-up delay-8 mb-6 p-5" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+              <div className="animate-fade-up delay-8 mb-6 p-5 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="ui-font text-xs mb-3" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Aylık Yatırım Bütçen</div>
                 <div className="num-font text-2xl mb-2" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{formatCurrency(monthlyInvestmentBudget)}</div>
                 <div className="ui-font text-xs" style={{ color: COLORS.textDim, lineHeight: 1.5 }}>
@@ -621,8 +649,7 @@ export default function InvestmentPage({
                 const change = p?.change;
                 const isCustom = !DEFAULT_ASSETS.some(d => d.id === asset.id);
                 return (
-                  <div key={asset.id} className={`fade-up delay-${Math.min(idx + 1, 8)} p-4`}
-                    className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', borderLeft: `3px solid ${COLORS.accent}` }}>
+                  <div key={asset.id} className={`fade-up delay-${Math.min(idx + 1, 8)} p-4 rounded-xl transition-all duration-300 hover:neon-border-glow`} style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px', borderLeft: `3px solid ${COLORS.accent}` }}>
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <div className="num-font text-xs mb-0.5" style={{ color: COLORS.textDim, letterSpacing: '0.1em' }}>{asset.symbol}</div>
@@ -729,7 +756,7 @@ export default function InvestmentPage({
         {activeTab === 'tips' && (
           <div className="space-y-3">
             {tips.map((tip, idx) => (
-              <div key={idx} className={`fade-up delay-${Math.min(idx + 1, 7)} p-5`} className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+              <div key={idx} className={`fade-up delay-${Math.min(idx + 1, 7)} p-5 rounded-xl transition-all duration-300 hover:neon-border-glow`} style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="flex items-start gap-4">
                   <div className="display-font text-3xl flex-shrink-0" style={{ color: COLORS.accent, lineHeight: 1 }}>{tip.icon}</div>
                   <div className="min-w-0 flex-1">
@@ -760,7 +787,7 @@ export default function InvestmentPage({
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-1 mb-5 p-1" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+            <div className="grid grid-cols-2 gap-1 mb-5 p-1 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
               <button onClick={() => setTxType('buy')} className="ui-font py-2.5"
                 style={{ background: txType === 'buy' ? COLORS.positive : 'transparent', color: txType === 'buy' ? COLORS.bg : COLORS.textBright, fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>ALIŞ</button>
               <button onClick={() => setTxType('sell')} className="ui-font py-2.5"
@@ -802,7 +829,7 @@ export default function InvestmentPage({
             </div>
 
             {txAmount && txPrice && (
-              <div className="mb-5 p-3" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+              <div className="mb-5 p-3 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <div className="ui-font text-xs mb-1" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Toplam</div>
                 <div className="num-font text-xl" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{formatCurrency(parseFloat(txAmount) * parseFloat(txPrice))}</div>
               </div>
@@ -912,7 +939,7 @@ export default function InvestmentPage({
 
             <div className="mb-6">
               <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Periyot</label>
-              <div className="grid grid-cols-2 gap-1 p-1" className="rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
+              <div className="grid grid-cols-2 gap-1 p-1 rounded-xl transition-all duration-300 hover:neon-border-glow" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderRadius: '8px' }}>
                 <button onClick={() => setGoalPeriod('monthly')} className="ui-font py-2"
                   style={{ background: goalPeriod === 'monthly' ? COLORS.accent : 'transparent', color: goalPeriod === 'monthly' ? COLORS.bg : COLORS.textBright, fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Aylık</button>
                 <button onClick={() => setGoalPeriod('yearly')} className="ui-font py-2"

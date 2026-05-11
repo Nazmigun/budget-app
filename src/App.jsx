@@ -1052,7 +1052,6 @@ const handleLogout = async () => {
                 setCalendarYear(new Date().getFullYear());
                 setShowCalendar(true);
               }}
-              className="font-sans text-xs flex items-center gap-2 px-3 py-2 transition-all hover:bg-[#0F172A] hover:text-[#F8FAFC]"
               style={{
                 border: '1px solid #0F172A',
                 background: '#0F172A',
