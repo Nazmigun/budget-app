@@ -25,10 +25,17 @@ export default function InvestmentPage({
 }) {
   const [activeTab, setActiveTab] = useState('portfolio');
   const [prices, setPrices] = useState({});
+  const [prevPrices, setPrevPrices] = useState({});
   const [pricesLoading, setPricesLoading] = useState(true);
   const [pricesError, setPricesError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [displayCurrency, setDisplayCurrency] = useState('TRY');
+  const [displayCurrency, setDisplayCurrency] = useState(() => {
+    try { return localStorage.getItem('inv_display_currency') || 'TRY'; } catch { return 'TRY'; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem('inv_display_currency', displayCurrency); } catch {}
+  }, [displayCurrency]);
   
   const [showTxModal, setShowTxModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
@@ -39,8 +46,9 @@ export default function InvestmentPage({
   
   const [newGoalName, setNewGoalName] = useState('');
   const [newGoalTarget, setNewGoalTarget] = useState('');
+  const [newGoalIcon, setNewGoalIcon] = useState('flag');
   const [chartInterval, setChartInterval] = useState('1A');
-  const [refreshInterval, setRefreshInterval] = useState(10);
+  const [refreshInterval, setRefreshInterval] = useState(30);
   
   const [txType, setTxType] = useState('buy');
   const [txAssetId, setTxAssetId] = useState('');
@@ -54,17 +62,40 @@ export default function InvestmentPage({
 
   const fetchPricesRef = useRef();
   fetchPricesRef.current = async () => {
-    setPricesLoading(true);
     setPricesError(null);
     try {
       const newPrices = {};
+      
+      // Fetch both today's and yesterday's FX rates for real 24h change
       try {
-        const fxRes = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=TRY,EUR,GBP');
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        
+        const [fxRes, fxPrevRes] = await Promise.all([
+          fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=TRY,EUR,GBP'),
+          fetch(`https://api.frankfurter.dev/v1/${yesterdayStr}?base=USD&symbols=TRY,EUR,GBP`)
+        ]);
         const fxData = await fxRes.json();
+        const fxPrevData = await fxPrevRes.json();
+        
         if (fxData.rates) {
-          newPrices.usd = { try: fxData.rates.TRY, change: -0.05 };
-          newPrices.eur = { try: fxData.rates.TRY / fxData.rates.EUR, change: +0.15 };
-          newPrices.gbp = { try: fxData.rates.TRY / fxData.rates.GBP, change: -0.20 };
+          const prevRates = fxPrevData.rates || {};
+          
+          const usdTry = fxData.rates.TRY;
+          const prevUsdTry = prevRates.TRY || usdTry;
+          const usdChange = prevUsdTry > 0 ? ((usdTry - prevUsdTry) / prevUsdTry) * 100 : 0;
+          newPrices.usd = { try: usdTry, change: usdChange };
+          
+          const eurTry = fxData.rates.TRY / fxData.rates.EUR;
+          const prevEurTry = prevRates.TRY && prevRates.EUR ? prevRates.TRY / prevRates.EUR : eurTry;
+          const eurChange = prevEurTry > 0 ? ((eurTry - prevEurTry) / prevEurTry) * 100 : 0;
+          newPrices.eur = { try: eurTry, change: eurChange };
+          
+          const gbpTry = fxData.rates.TRY / fxData.rates.GBP;
+          const prevGbpTry = prevRates.TRY && prevRates.GBP ? prevRates.TRY / prevRates.GBP : gbpTry;
+          const gbpChange = prevGbpTry > 0 ? ((gbpTry - prevGbpTry) / prevGbpTry) * 100 : 0;
+          newPrices.gbp = { try: gbpTry, change: gbpChange };
         }
       } catch (e) { console.error('FX:', e); }
       
@@ -76,7 +107,7 @@ export default function InvestmentPage({
         const cryptoRes = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${uniqueIds}&vs_currencies=try,usd&include_24hr_change=true`);
         const cryptoData = await cryptoRes.json();
         if (cryptoData['tether-gold']) {
-          newPrices.gold = { try: cryptoData['tether-gold'].try / 31.1035, change: cryptoData['tether-gold'].try_24h_change || 1.25 };
+          newPrices.gold = { try: cryptoData['tether-gold'].try / 31.1035, change: cryptoData['tether-gold'].try_24h_change || 0 };
         }
         allAssets.filter(a => a.type === 'crypto' && a.cgId).forEach(asset => {
           if (cryptoData[asset.cgId]) {
@@ -89,6 +120,7 @@ export default function InvestmentPage({
         });
       } catch (e) { console.error('Crypto:', e); }
       
+      setPrevPrices(prev => ({...prices}));
       setPrices(newPrices);
       setLastUpdate(new Date());
     } catch (e) {
@@ -254,14 +286,26 @@ export default function InvestmentPage({
       name: newGoalName,
       target: parseFloat(newGoalTarget),
       current: 0,
-      icon: 'flag',
+      icon: newGoalIcon,
       active: true
     };
     onUpdateGoals([...investmentGoals, newGoal]);
     setShowGoalModal(false);
     setNewGoalName('');
     setNewGoalTarget('');
+    setNewGoalIcon('flag');
   };
+
+  const goalIcons = [
+    { id: 'flag', label: 'Hedef' },
+    { id: 'home', label: 'Ev' },
+    { id: 'directions_car', label: 'Araç' },
+    { id: 'flight_takeoff', label: 'Seyahat' },
+    { id: 'school', label: 'Eğitim' },
+    { id: 'devices', label: 'Teknoloji' },
+    { id: 'savings', label: 'Birikim' },
+    { id: 'diamond', label: 'Lüks' },
+  ];
 
   // Mock chart data if empty
   const chartData = portfolioSnapshots.length > 0 ? portfolioSnapshots : [
@@ -473,13 +517,16 @@ export default function InvestmentPage({
                    </div>
                    {allAssets.map((asset, idx) => {
                       const p = prices[asset.id];
-                      const priceStr = p ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(p.try) : 'Yükleniyor...';
+                      const pp = prevPrices[asset.id];
+                      const priceStr = p ? new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }).format(p.try) : 'Yükleniyor...';
                       const change = p?.change || 0;
+                      const priceChanged = pp && p && pp.try !== p.try;
+                      const priceUp = pp && p && p.try > pp.try;
                       return (
                          <div key={asset.id} className={`flex items-center p-4 border-b border-[#1E293B] hover:bg-[#1E293B]/30 transition-colors ${idx % 2 === 0 ? 'bg-[#0A0F16]' : 'bg-[#111827]'}`}>
                             <div className="w-32 font-bold text-white">{asset.symbol}</div>
                             <div className="flex-1 text-[#64748B]">{asset.name}</div>
-                            <div className="w-48 text-right font-mono text-white text-base">{priceStr}</div>
+                            <div className={`w-48 text-right font-mono text-base transition-all duration-700 ${priceChanged ? (priceUp ? 'text-[#00FF85]' : 'text-[#EF4444]') : 'text-white'}`}>{priceStr}</div>
                             <div className="w-32 flex justify-end">
                                <div className={`flex items-center gap-1 px-2 py-1 rounded ${change >= 0 ? 'bg-[#00FF85]/10 text-[#00FF85]' : 'bg-[#EF4444]/10 text-[#EF4444]'}`}>
                                   <span className="material-symbols-outlined text-[16px]">{change >= 0 ? 'arrow_upward' : 'arrow_downward'}</span>
@@ -607,25 +654,31 @@ export default function InvestmentPage({
 
         {/* ======================= TAVSIYELER ======================= */}
         {activeTab === 'tips' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             {[
-               { title: 'Çeşitlendirme', desc: 'Riskleri dağıtmak için portföyünüzü farklı varlık sınıflarına (hisse senedi, tahvil, emtia) yayın. Tek bir sektöre bağlı kalmamak, piyasa dalgalanmalarına karşı kalkan görevi görür.' },
-               { title: 'Maliyet Ortalaması', desc: 'DCA (Dollar-Cost Averaging) stratejisi ile piyasa zamanlaması yapmaya çalışmak yerine, düzenli aralıklarla sabit tutarlarda yatırım yaparak ortalama maliyetinizi düşürün.' },
-               { title: 'Acil Durum Fonu', desc: 'Yatırıma başlamadan önce, en az 3-6 aylık zorunlu giderlerinizi kapsayacak likit bir acil durum fonu oluşturun. Bu, beklenmedik durumlarda yatırımlarınızı bozmanızı engeller.' },
-               { title: 'Duygu Kontrolü', desc: 'Piyasalardaki ani düşüşlerde (FUD) veya yükselişlerde (FOMO) panik yapmayın. Kararlarınızı duygularınızla değil, önceden belirlediğiniz analitik stratejiniz doğrultusunda alın.' },
-               { title: 'Bileşik Getiri', desc: 'Kazançlarınızı yeniden yatırıma dönüştürerek bileşik getirinin gücünden faydalanın. Zaman, bu stratejideki en değerli müttefikinizdir; erken başlamak büyük fark yaratır.' },
-               { title: 'Risk Yönetimi', desc: 'Kaybetmeyi göze alabileceğinizden daha fazla yatırım yapmayın. Her işlem için maksimum risk oranınızı (örn. portföyün %2\'si) önceden belirleyin ve buna kesinlikle uyun.' },
-               { title: 'Araştırma Yapın', desc: 'DYOR (Do Your Own Research). Kulaktan dolma bilgilerle veya başkalarının tavsiyeleriyle işlem yapmayın. Yatırım yapacağınız şirketin veya projenin temellerini mutlaka inceleyin.' },
-               { title: 'Uzun Vadeli Plan', desc: 'Kısa vadeli dalgalanmalara odaklanmak yerine, 5-10 yıllık makro trendleri hedefleyin. Kısa vadeli gürültü, uzun vadeli zenginlik yaratma hedefinizi perdelememeli.' }
-             ].map((tip, idx) => (
-                <div key={idx} className="bg-[#111827] border border-[#1E293B] rounded-xl p-6 flex flex-col">
-                   <div className="w-4 h-4 rounded-full bg-[#00FF85] mb-6 flex items-center justify-center overflow-hidden">
-                      <div className="w-full h-1/2 bg-black/20 absolute bottom-0"></div>
+          <div className="flex flex-col gap-8">
+             <div className="flex items-center gap-2 border-b border-[#1E293B] pb-6">
+                <div className="w-2 h-6 bg-[#00FF85]"></div>
+                <h2 className="text-2xl font-bold text-[#00FF85] tracking-wide">YATIRIM TAVSİYELERİ</h2>
+             </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[
+                  { title: 'Çeşitlendirme', icon: 'pie_chart', desc: 'Riskleri dağıtmak için portföyünüzü farklı varlık sınıflarına (hisse senedi, tahvil, emtia) yayın. Tek bir sektöre bağlı kalmamak, piyasa dalgalanmalarına karşı kalkan görevi görür.' },
+                  { title: 'Maliyet Ortalaması', icon: 'show_chart', desc: 'DCA (Dollar-Cost Averaging) stratejisi ile piyasa zamanlaması yapmaya çalışmak yerine, düzenli aralıklarla sabit tutarlarda yatırım yaparak ortalama maliyetinizi düşürün.' },
+                  { title: 'Acil Durum Fonu', icon: 'shield', desc: 'Yatırıma başlamadan önce, en az 3-6 aylık zorunlu giderlerinizi kapsayacak likit bir acil durum fonu oluşturun. Bu, beklenmedik durumlarda yatırımlarınızı bozmanızı engeller.' },
+                  { title: 'Duygu Kontrolü', icon: 'psychology', desc: 'Piyasalardaki ani düşüşlerde (FUD) veya yükselişlerde (FOMO) panik yapmayın. Kararlarınızı duygularınızla değil, önceden belirlediğiniz analitik stratejiniz doğrultusunda alın.' },
+                  { title: 'Bileşik Getiri', icon: 'trending_up', desc: 'Kazançlarınızı yeniden yatırıma dönüştürerek bileşik getirinin gücünden faydalanın. Zaman, bu stratejideki en değerli müttefikinizdir; erken başlamak büyük fark yaratır.' },
+                  { title: 'Risk Yönetimi', icon: 'security', desc: 'Kaybetmeyi göze alabileceğinizden daha fazla yatırım yapmayın. Her işlem için maksimum risk oranınızı (örn. portföyün %2\'si) önceden belirleyin ve buna kesinlikle uyun.' },
+                  { title: 'Araştırma Yapın', icon: 'search', desc: 'DYOR (Do Your Own Research). Kulaktan dolma bilgilerle veya başkalarının tavsiyeleriyle işlem yapmayın. Yatırım yapacağınız şirketin veya projenin temellerini mutlaka inceleyin.' },
+                  { title: 'Uzun Vadeli Plan', icon: 'calendar_month', desc: 'Kısa vadeli dalgalanmalara odaklanmak yerine, 5-10 yıllık makro trendleri hedefleyin. Kısa vadeli gürültü, uzun vadeli zenginlik yaratma hedefinizi perdelememeli.' }
+                ].map((tip, idx) => (
+                   <div key={idx} className="bg-[#111827] border border-[#1E293B] rounded-xl p-6 flex flex-col hover:border-[#00FF85]/30 transition-all group">
+                      <div className="w-10 h-10 rounded-lg bg-[#00FF85]/10 border border-[#00FF85]/20 mb-5 flex items-center justify-center group-hover:bg-[#00FF85]/20 transition-all">
+                         <span className="material-symbols-outlined text-[#00FF85] text-[20px]">{tip.icon}</span>
+                      </div>
+                      <h3 className="text-lg font-bold text-white mb-3">{tip.title}</h3>
+                      <p className="text-[#64748B] text-sm leading-relaxed">{tip.desc}</p>
                    </div>
-                   <h3 className="text-lg font-bold text-white mb-4">{tip.title}</h3>
-                   <p className="text-[#64748B] text-sm leading-relaxed">{tip.desc}</p>
-                </div>
-             ))}
+                ))}
+             </div>
           </div>
         )}
 
@@ -685,6 +738,17 @@ export default function InvestmentPage({
                  <div>
                     <label className="block text-[#64748B] text-xs font-bold uppercase tracking-widest mb-2">HEDEF TUTAR (₺)</label>
                     <input type="number" value={newGoalTarget} onChange={(e) => setNewGoalTarget(e.target.value)} placeholder="0.00" className="w-full bg-transparent border-b border-[#1E293B] text-white py-3 outline-none font-mono focus:border-[#00FF85] transition-colors" />
+                 </div>
+                 <div>
+                    <label className="block text-[#64748B] text-xs font-bold uppercase tracking-widest mb-2">İKON SEÇ</label>
+                    <div className="grid grid-cols-4 gap-2">
+                       {goalIcons.map(gi => (
+                          <button key={gi.id} onClick={() => setNewGoalIcon(gi.id)} className={`flex flex-col items-center gap-1 p-3 rounded-lg border transition-all ${newGoalIcon === gi.id ? 'border-[#00FF85] bg-[#00FF85]/10 text-[#00FF85]' : 'border-[#1E293B] text-[#64748B] hover:text-white hover:border-[#64748B]'}`}>
+                             <span className="material-symbols-outlined text-[20px]">{gi.id}</span>
+                             <span className="text-[9px] uppercase tracking-wider">{gi.label}</span>
+                          </button>
+                       ))}
+                    </div>
                  </div>
                  <button onClick={handleAddGoal} className="w-full py-4 rounded font-bold uppercase tracking-widest flex items-center justify-center gap-2 mt-4 bg-[#00FF85] text-black hover:brightness-110">
                     <span className="material-symbols-outlined text-[18px]">add</span> HEDEFİ KAYDET
