@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { ArrowLeft, TrendingUp, TrendingDown, Target, Plus, X, RefreshCw, Search, ArrowUpRight, ArrowDownRight, AlertCircle, Wallet, BarChart3, Activity } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Target, Plus, X, RefreshCw, Search, ArrowUpRight, ArrowDownRight, AlertCircle, Wallet, BarChart3, Activity, ChevronUp, ChevronDown, Eye, EyeOff, Trash2, Settings2 } from 'lucide-react';
 import { LineChart, Line, PieChart, Pie, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis, Area, AreaChart } from 'recharts';
 
 const COLORS = {
@@ -41,7 +41,9 @@ export default function InvestmentPage({
   onUpdateWatchedAssets,
   portfolioSnapshots = [],
   onUpdateSnapshots,
-  monthlyInvestmentBudget = 0
+  monthlyInvestmentBudget = 0,
+  marketAssetConfig = [],
+  onUpdateMarketAssetConfig
 }) {
   const [activeTab, setActiveTab] = useState('portfolio');
   const [prices, setPrices] = useState({});
@@ -49,6 +51,18 @@ export default function InvestmentPage({
   const [pricesError, setPricesError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [chartPeriod, setChartPeriod] = useState('30d');
+  
+  // Para birimi seçici — localStorage'dan oku
+  const [currency, setCurrencyState] = useState(() => {
+    try { return localStorage.getItem('investment_currency') || 'TRY'; } catch { return 'TRY'; }
+  });
+  const setCurrency = (c) => {
+    setCurrencyState(c);
+    try { localStorage.setItem('investment_currency', c); } catch {}
+  };
+  
+  // Piyasa düzenleme modu
+  const [marketEditMode, setMarketEditMode] = useState(false);
   
   const [showTxModal, setShowTxModal] = useState(false);
   const [editingTx, setEditingTx] = useState(null);
@@ -75,6 +89,45 @@ export default function InvestmentPage({
   const allAssets = useMemo(() => {
     return [...DEFAULT_ASSETS, ...watchedAssets.filter(a => !DEFAULT_ASSETS.some(d => d.id === a.id))];
   }, [watchedAssets]);
+
+  // Piyasa tablosu için sıralanmış ve filtre edilmiş varlık listesi
+  const orderedMarketAssets = useMemo(() => {
+    if (!marketAssetConfig || marketAssetConfig.length === 0) return allAssets;
+    // Config'deki sıraya göre düzenleme, eksik olanları sona ekle
+    const ordered = [];
+    const seen = new Set();
+    marketAssetConfig.forEach(cfg => {
+      const asset = allAssets.find(a => a.id === cfg.id);
+      if (asset) {
+        if (cfg.visible !== false) ordered.push(asset);
+        seen.add(cfg.id);
+      }
+    });
+    // Config'te olmayan yeni varlıklar (yeni eklenenler)
+    allAssets.forEach(a => {
+      if (!seen.has(a.id)) ordered.push(a);
+    });
+    return ordered;
+  }, [allAssets, marketAssetConfig]);
+
+  // Düzenleme modunda tüm varlıkları (görünür + gizli) göster
+  const allMarketAssetsForEdit = useMemo(() => {
+    if (!marketAssetConfig || marketAssetConfig.length === 0)
+      return allAssets.map(a => ({ ...a, visible: true }));
+    const result = [];
+    const seen = new Set();
+    marketAssetConfig.forEach(cfg => {
+      const asset = allAssets.find(a => a.id === cfg.id);
+      if (asset) {
+        result.push({ ...asset, visible: cfg.visible !== false });
+        seen.add(cfg.id);
+      }
+    });
+    allAssets.forEach(a => {
+      if (!seen.has(a.id)) result.push({ ...a, visible: true });
+    });
+    return result;
+  }, [allAssets, marketAssetConfig]);
 
   const fetchPrices = async () => {
     setPricesLoading(true);
@@ -310,17 +363,69 @@ export default function InvestmentPage({
     });
   }, [portfolioSnapshots, portfolioValues.totalValue]);
 
+  // Döviz kurları (fiyatlardan al)
+  const fxRates = useMemo(() => ({
+    TRY: 1,
+    USD: prices.usd?.try ? 1 / prices.usd.try : null,
+    EUR: prices.eur?.try ? 1 / prices.eur.try : null,
+  }), [prices]);
+
+  const currencySymbols = { TRY: '₺', USD: '$', EUR: '€' };
+
+  const convertFromTRY = (valTRY) => {
+    if (currency === 'TRY' || !fxRates[currency]) return valTRY;
+    return valTRY * fxRates[currency];
+  };
+
   const formatCurrency = (val, maxDigits) => {
     if (val === null || val === undefined || isNaN(val)) return '—';
-    return new Intl.NumberFormat('tr-TR', {
-      style: 'currency', currency: 'TRY',
-      maximumFractionDigits: maxDigits !== undefined ? maxDigits : (Math.abs(val) > 100 ? 0 : 2)
-    }).format(val);
+    const converted = convertFromTRY(val);
+    const sym = currencySymbols[currency] || '₺';
+    const digits = maxDigits !== undefined ? maxDigits : (Math.abs(converted) > 100 ? 0 : 2);
+    const formatted = new Intl.NumberFormat('tr-TR', {
+      maximumFractionDigits: digits, minimumFractionDigits: 0
+    }).format(converted);
+    return `${sym}${formatted}`;
   };
   const formatAmount = (val) => {
     if (val === null || val === undefined || isNaN(val)) return '—';
     if (val < 0.001) return val.toExponential(2);
     return new Intl.NumberFormat('tr-TR', { maximumFractionDigits: val < 1 ? 6 : (val < 100 ? 4 : 2) }).format(val);
+  };
+
+  // Piyasa tablosu sıralama yardımcıları
+  const getConfigList = () => {
+    if (marketAssetConfig && marketAssetConfig.length > 0) return [...marketAssetConfig];
+    return allAssets.map(a => ({ id: a.id, visible: true }));
+  };
+
+  const moveAsset = (assetId, direction) => {
+    const list = getConfigList();
+    const idx = list.findIndex(c => c.id === assetId);
+    if (idx < 0) return;
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= list.length) return;
+    [list[idx], list[newIdx]] = [list[newIdx], list[idx]];
+    onUpdateMarketAssetConfig(list);
+  };
+
+  const toggleAssetVisibility = (assetId) => {
+    const list = getConfigList();
+    const item = list.find(c => c.id === assetId);
+    if (item) item.visible = !item.visible;
+    else list.push({ id: assetId, visible: false });
+    onUpdateMarketAssetConfig(list);
+  };
+
+  const removeAssetFromMarket = (assetId) => {
+    // Custom coin ise watchedAssets'ten de kaldır
+    const isCustom = !DEFAULT_ASSETS.some(d => d.id === assetId);
+    if (isCustom) {
+      onUpdateWatchedAssets(watchedAssets.filter(a => a.id !== assetId));
+    }
+    // Config'den kaldır
+    const list = getConfigList().filter(c => c.id !== assetId);
+    onUpdateMarketAssetConfig(list);
   };
 
   const openTxModal = (existingTx = null) => {
@@ -447,9 +552,25 @@ export default function InvestmentPage({
             style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright, background: COLORS.bgPanel, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 500 }}>
             <ArrowLeft size={13} /><span className="hidden sm:inline">Bütçeye Dön</span><span className="sm:hidden">Geri</span>
           </button>
-          <div className="flex items-center gap-2 ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.15em' }}>
-            <div className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: COLORS.accent }}></div>
-            <span>CANLI</span>
+          <div className="flex items-center gap-3">
+            {/* Para birimi seçici */}
+            <div className="flex gap-0.5 p-0.5" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+              {['TRY', 'USD', 'EUR'].map(c => (
+                <button key={c} onClick={() => setCurrency(c)} className="ui-font px-2 py-1.5 transition-all"
+                  style={{
+                    background: currency === c ? COLORS.accent : 'transparent',
+                    color: currency === c ? COLORS.bg : COLORS.textBright,
+                    fontSize: '10px', fontWeight: 600, letterSpacing: '0.05em',
+                    minWidth: '36px'
+                  }}>
+                  {c === 'TRY' ? '₺' : c === 'USD' ? '$' : '€'} {c}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-2 ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.15em' }}>
+              <div className="w-1.5 h-1.5 rounded-full pulse-dot" style={{ background: COLORS.accent }}></div>
+              <span>CANLI</span>
+            </div>
           </div>
         </div>
 
@@ -694,14 +815,22 @@ export default function InvestmentPage({
                 {lastUpdate ? `Son: ${lastUpdate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}` : 'Yükleniyor...'}
               </div>
               <div className="flex gap-2">
-                <button onClick={() => setShowAddAssetModal(true)} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
-                  style={{ background: COLORS.accent, color: COLORS.bg, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-                  <Plus size={11} />Coin Ekle
+                <button onClick={() => setMarketEditMode(!marketEditMode)} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
+                  style={{ border: `1px solid ${marketEditMode ? COLORS.accent : COLORS.borderLight}`, color: marketEditMode ? COLORS.accent : COLORS.textBright, background: marketEditMode ? 'rgba(122, 224, 122, 0.08)' : 'transparent', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>
+                  <Settings2 size={11} />{marketEditMode ? 'Bitti' : 'Düzenle'}
                 </button>
-                <button onClick={fetchPrices} disabled={pricesLoading} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
-                  style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright, background: 'transparent', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>
-                  <RefreshCw size={11} className={pricesLoading ? 'spin' : ''} />Yenile
-                </button>
+                {!marketEditMode && (
+                  <>
+                    <button onClick={() => setShowAddAssetModal(true)} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
+                      style={{ background: COLORS.accent, color: COLORS.bg, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+                      <Plus size={11} />Coin Ekle
+                    </button>
+                    <button onClick={fetchPrices} disabled={pricesLoading} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
+                      style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright, background: 'transparent', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>
+                      <RefreshCw size={11} className={pricesLoading ? 'spin' : ''} />Yenile
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -711,41 +840,92 @@ export default function InvestmentPage({
               </div>
             )}
 
-            <div className="grid gap-2">
-              {allAssets.map((asset, idx) => {
-                const p = prices[asset.id];
-                const change = p?.change;
-                const isCustom = !DEFAULT_ASSETS.some(d => d.id === asset.id);
-                return (
-                  <div key={asset.id} className={`fade-up delay-${Math.min(idx + 1, 8)} p-4`}
-                    style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.accent}` }}>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="num-font text-xs mb-0.5" style={{ color: COLORS.textDim, letterSpacing: '0.1em' }}>{asset.symbol}</div>
-                        <div className="ui-font text-sm truncate" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{asset.name}</div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <div className="num-font text-base" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>
-                          {p?.try ? formatCurrency(p.try) : '—'}
+            {/* DÜZENLEME MODU */}
+            {marketEditMode ? (
+              <div className="grid gap-1.5">
+                {allMarketAssetsForEdit.map((asset, idx) => (
+                  <div key={asset.id} className="p-3 flex items-center gap-3"
+                    style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, opacity: asset.visible ? 1 : 0.45 }}>
+                    {/* Sıralama okları */}
+                    <div className="flex flex-col gap-0.5 flex-shrink-0">
+                      <button onClick={() => moveAsset(asset.id, -1)} disabled={idx === 0}
+                        className="w-6 h-5 flex items-center justify-center transition-all"
+                        style={{ border: `1px solid ${COLORS.border}`, color: idx === 0 ? COLORS.textDimmer : COLORS.textBright, cursor: idx === 0 ? 'not-allowed' : 'pointer' }}>
+                        <ChevronUp size={12} />
+                      </button>
+                      <button onClick={() => moveAsset(asset.id, 1)} disabled={idx === allMarketAssetsForEdit.length - 1}
+                        className="w-6 h-5 flex items-center justify-center transition-all"
+                        style={{ border: `1px solid ${COLORS.border}`, color: idx === allMarketAssetsForEdit.length - 1 ? COLORS.textDimmer : COLORS.textBright, cursor: idx === allMarketAssetsForEdit.length - 1 ? 'not-allowed' : 'pointer' }}>
+                        <ChevronDown size={12} />
+                      </button>
+                    </div>
+                    {/* Varlık bilgisi */}
+                    <div className="min-w-0 flex-1">
+                      <div className="num-font text-xs mb-0.5" style={{ color: COLORS.textDim, letterSpacing: '0.1em' }}>{asset.symbol}</div>
+                      <div className="ui-font text-sm truncate" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{asset.name}</div>
+                    </div>
+                    {/* Görünürlük toggle */}
+                    <button onClick={() => toggleAssetVisibility(asset.id)}
+                      className="w-8 h-8 flex items-center justify-center flex-shrink-0 transition-all"
+                      style={{ border: `1px solid ${asset.visible ? COLORS.borderLight : COLORS.border}`, color: asset.visible ? COLORS.accent : COLORS.textDim }}
+                      title={asset.visible ? 'Gizle' : 'Göster'}>
+                      {asset.visible ? <Eye size={13} /> : <EyeOff size={13} />}
+                    </button>
+                    {/* Silme */}
+                    <button onClick={() => removeAssetFromMarket(asset.id)}
+                      className="w-8 h-8 flex items-center justify-center flex-shrink-0 transition-all"
+                      style={{ border: '1px solid #5A2A2A', color: COLORS.negative }}
+                      title="Kaldır">
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+                {allMarketAssetsForEdit.length === 0 && (
+                  <div className="text-center py-8 ui-font text-xs" style={{ color: COLORS.textDim }}>
+                    Listeye "Coin Ekle" ile varlık ekleyebilirsin.
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* NORMAL GÖRÜNÜM */
+              <div className="grid gap-2">
+                {orderedMarketAssets.map((asset, idx) => {
+                  const p = prices[asset.id];
+                  const change = p?.change;
+                  return (
+                    <div key={asset.id} className={`fade-up delay-${Math.min(idx + 1, 8)} p-4`}
+                      style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.accent}` }}>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="num-font text-xs mb-0.5" style={{ color: COLORS.textDim, letterSpacing: '0.1em' }}>{asset.symbol}</div>
+                          <div className="ui-font text-sm truncate" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{asset.name}</div>
                         </div>
-                        {change !== undefined && change !== 0 && (
-                          <div className="num-font text-xs flex items-center justify-end gap-1" style={{ color: change > 0 ? COLORS.positive : COLORS.negative }}>
-                            {change > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                            {change.toFixed(2)}%
+                        <div className="text-right flex-shrink-0">
+                          <div className="num-font text-base" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>
+                            {p?.try ? formatCurrency(p.try) : '—'}
                           </div>
-                        )}
+                          {change !== undefined && change !== 0 && (
+                            <div className="num-font text-xs flex items-center justify-end gap-1" style={{ color: change > 0 ? COLORS.positive : COLORS.negative }}>
+                              {change > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                              {change.toFixed(2)}%
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      {isCustom && (
-                        <button onClick={() => onUpdateWatchedAssets(watchedAssets.filter(a => a.id !== asset.id))} className="w-6 h-6 flex items-center justify-center flex-shrink-0"
-                          style={{ border: '1px solid #5A2A2A', color: COLORS.negative }} title="Kaldır">
-                          <X size={10} />
-                        </button>
-                      )}
+                    </div>
+                  );
+                })}
+                {orderedMarketAssets.length === 0 && (
+                  <div className="text-center py-12 px-6" style={{ background: COLORS.bgPanel, border: `1px dashed ${COLORS.border}` }}>
+                    <BarChart3 size={32} className="mx-auto mb-3" style={{ color: COLORS.textDim }} />
+                    <div className="ui-font text-sm mb-2" style={{ color: COLORS.textBright }}>Piyasa listesi boş</div>
+                    <div className="ui-font text-xs" style={{ color: COLORS.textDim, lineHeight: 1.5 }}>
+                      "Düzenle" butonundan gizlenen varlıkları açabilir veya "Coin Ekle" ile yeni varlık ekleyebilirsin.
                     </div>
                   </div>
-                );
-              })}
-            </div>
+                )}
+              </div>
+            )}
 
             <div className="mt-6 p-3 ui-font text-xs" style={{ color: COLORS.textDimmer, lineHeight: 1.5 }}>
               Veri kaynakları: Frankfurter (döviz), CoinGecko (kripto, altın). 5 dakikada bir otomatik güncellenir.

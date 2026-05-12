@@ -51,6 +51,7 @@ export default function App() {
   const [transactions, setTransactions] = useState([]); // [{ id, type, assetId, amount, price, date }]
   const [watchedAssets, setWatchedAssets] = useState([]); // kullanıcının eklediği custom coinler
   const [portfolioSnapshots, setPortfolioSnapshots] = useState([]); // [{ date, value, cost }]
+  const [marketAssetConfig, setMarketAssetConfig] = useState([]); // [{ id, visible }] sıralı
   
   // Expense form
   const [expenseAmount, setExpenseAmount] = useState('');
@@ -97,6 +98,7 @@ export default function App() {
         setTransactions([]);
         setWatchedAssets([]);
         setPortfolioSnapshots([]);
+        setMarketAssetConfig([]);
         setStep('setup');
         setHasLoaded(false);
       }
@@ -160,6 +162,7 @@ export default function App() {
           if (dataToLoad.transactions) setTransactions(dataToLoad.transactions);
           if (dataToLoad.watchedAssets) setWatchedAssets(dataToLoad.watchedAssets);
           if (dataToLoad.portfolioSnapshots) setPortfolioSnapshots(dataToLoad.portfolioSnapshots);
+          if (dataToLoad.marketAssetConfig) setMarketAssetConfig(dataToLoad.marketAssetConfig);
           
           // OTOMATİK GÜN GEÇİŞİ: todayExpensesDate dünden veya daha eskiyse, o günü kapat
           if (dataToLoad.todayExpenses && dataToLoad.todayExpensesDate) {
@@ -252,7 +255,8 @@ export default function App() {
       investmentGoals,
       transactions,
       watchedAssets,
-      portfolioSnapshots
+      portfolioSnapshots,
+      marketAssetConfig
     };
     
     const dataStr = JSON.stringify(data);
@@ -290,7 +294,7 @@ export default function App() {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [salary, salaryDay, investmentEnabled, investmentPercent, investmentAmount, investmentMode, dayHistory, carryOver, todayExpenses, step, hasLoaded, todayKey, session, tutorialCompleted, investmentGoals, transactions, watchedAssets, portfolioSnapshots]);
+  }, [salary, salaryDay, investmentEnabled, investmentPercent, investmentAmount, investmentMode, dayHistory, carryOver, todayExpenses, step, hasLoaded, todayKey, session, tutorialCompleted, investmentGoals, transactions, watchedAssets, portfolioSnapshots, marketAssetConfig]);
 
   // Çıkış yap
   
@@ -558,6 +562,7 @@ const handleLogout = async () => {
         setTransactions([]);
         setWatchedAssets([]);
         setPortfolioSnapshots([]);
+        setMarketAssetConfig([]);
         setStep('setup');
         setShowCalendar(false);
         setSelectedDate(null);
@@ -883,6 +888,8 @@ const handleLogout = async () => {
         portfolioSnapshots={portfolioSnapshots}
         onUpdateSnapshots={setPortfolioSnapshots}
         monthlyInvestmentBudget={calculations.invAmount}
+        marketAssetConfig={marketAssetConfig}
+        onUpdateMarketAssetConfig={setMarketAssetConfig}
       />
     );
   }
