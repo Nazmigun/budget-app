@@ -21,6 +21,73 @@ const COLORS = {
 
 const PIE_COLORS = ['#7AE07A', '#5CB85C', '#3D8B3D', '#9FE89F', '#2A6B2A', '#C0F0C0', '#1F4F1F'];
 
+const getFGColor = (v) => {
+  if (v <= 24) return '#FF4444';
+  if (v <= 44) return '#FF8844';
+  if (v <= 55) return '#FFD700';
+  if (v <= 74) return '#7AE07A';
+  return '#22C55E';
+};
+const getFGLabel = (v) => {
+  if (v <= 24) return 'Aşırı Korku';
+  if (v <= 44) return 'Korku';
+  if (v <= 55) return 'Nötr';
+  if (v <= 74) return 'Açgözlülük';
+  return 'Aşırı Açgözlülük';
+};
+
+const FearGreedGauge = ({ value }) => {
+  const r = 75, cx = 100, cy = 100, sw = 15;
+  const C = Math.PI * r;
+  const dashOffset = C * (1 - Math.max(0, Math.min(100, value)) / 100);
+  const angle = Math.PI * (1 - value / 100);
+  const nx = (cx + r * Math.cos(angle)).toFixed(1);
+  const ny = (cy - r * Math.sin(angle)).toFixed(1);
+  const arcPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 0 ${cx + r} ${cy}`;
+  const color = getFGColor(value);
+  return (
+    <svg viewBox="0 0 200 115" style={{ width: '100%', maxWidth: 240, overflow: 'visible' }}>
+      <defs>
+        <linearGradient id="fgi-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FF4444" />
+          <stop offset="25%" stopColor="#FF8844" />
+          <stop offset="50%" stopColor="#FFD700" />
+          <stop offset="75%" stopColor="#7AE07A" />
+          <stop offset="100%" stopColor="#22C55E" />
+        </linearGradient>
+      </defs>
+      <path d={arcPath} fill="none" stroke="#0A1A0A" strokeWidth={sw} strokeLinecap="round" />
+      <path d={arcPath} fill="none" stroke="url(#fgi-grad)" strokeWidth={sw}
+        strokeDasharray={`${C}`} strokeDashoffset={dashOffset} strokeLinecap="round" />
+      <circle cx={nx} cy={ny} r={9} fill="#050D05" />
+      <circle cx={nx} cy={ny} r={5} fill="white" />
+      <circle cx={nx} cy={ny} r={2.5} fill={color} />
+      <text x="100" y="80" textAnchor="middle" fill={color} fontSize="30" fontWeight="700" fontFamily="'Courier New', monospace">{value}</text>
+      <text x="100" y="97" textAnchor="middle" fill={color} fontSize="9" fontFamily="'Inter', sans-serif" letterSpacing="2">{getFGLabel(value).toUpperCase()}</text>
+    </svg>
+  );
+};
+
+const FGMiniChart = ({ data }) => {
+  if (!data || data.length === 0) return null;
+  const items = [...data].reverse().slice(-30);
+  const count = items.length;
+  const bw = 5, gap = 1.5, h = 36;
+  const totalW = count * (bw + gap) - gap;
+  return (
+    <svg viewBox={`0 0 ${totalW} ${h}`} style={{ width: '100%', height: h }}>
+      {items.map((d, i) => {
+        const v = parseInt(d.value);
+        const bh = Math.max(2, (v / 100) * (h - 2));
+        return (
+          <rect key={i} x={i * (bw + gap)} y={h - bh} width={bw} height={bh}
+            fill={getFGColor(v)} opacity={i === count - 1 ? 1 : 0.55} rx={1} />
+        );
+      })}
+    </svg>
+  );
+};
+
 const DEFAULT_ASSETS = [
   { id: 'usd', symbol: 'USD', name: 'ABD Doları', type: 'fiat', source: 'frankfurter' },
   { id: 'eur', symbol: 'EUR', name: 'Euro', type: 'fiat', source: 'frankfurter' },
@@ -89,6 +156,10 @@ export default function InvestmentPage({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+
+  const [fearGreedData, setFearGreedData] = useState(null);
+  const [fearGreedLoading, setFearGreedLoading] = useState(false);
+  const [fearGreedError, setFearGreedError] = useState(null);
 
   const [invSpotlightRect, setInvSpotlightRect] = useState(null);
 
@@ -301,11 +372,41 @@ export default function InvestmentPage({
     }
   };
 
+  const fetchFearGreed = async () => {
+    setFearGreedLoading(true);
+    setFearGreedError(null);
+    try {
+      const res = await fetch('https://api.alternative.me/fng/?limit=90&format=json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json?.data?.length > 0) setFearGreedData(json.data);
+      else throw new Error('Veri boş');
+    } catch (e) {
+      console.error('Fear & Greed hatası:', e);
+      setFearGreedError('Veri alınamadı');
+    } finally {
+      setFearGreedLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchPrices();
-    const interval = setInterval(fetchPrices, 5 * 60 * 1000);
+    fetchFearGreed();
+    const interval = setInterval(() => { fetchPrices(); fetchFearGreed(); }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [allAssets.length]);
+
+  const fgStats = useMemo(() => {
+    if (!fearGreedData || fearGreedData.length === 0) return null;
+    const avg = (arr) => Math.round(arr.reduce((s, d) => s + parseInt(d.value), 0) / arr.length);
+    return {
+      current: parseInt(fearGreedData[0].value),
+      avg7: avg(fearGreedData.slice(0, Math.min(7, fearGreedData.length))),
+      avg30: avg(fearGreedData.slice(0, Math.min(30, fearGreedData.length))),
+      avg90: avg(fearGreedData.slice(0, Math.min(90, fearGreedData.length))),
+      history: fearGreedData,
+    };
+  }, [fearGreedData]);
 
   const portfolio = useMemo(() => {
     const holdings = {};
@@ -886,6 +987,91 @@ export default function InvestmentPage({
             {pricesError && (
               <div className="p-4 mb-5 ui-font text-sm flex items-start gap-2" style={{ background: 'rgba(255, 107, 107, 0.05)', border: '1px solid #5A2A2A', color: COLORS.negative }}>
                 <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />{pricesError}
+              </div>
+            )}
+
+            {/* FEAR & GREED KARTI */}
+            {!marketEditMode && (
+              <div className="mb-5" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${fgStats ? getFGColor(fgStats.current) : COLORS.accent}` }}>
+                <div className="p-4 pb-0 flex items-center justify-between">
+                  <div className="ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.25em', textTransform: 'uppercase' }}>▌ Korku &amp; Açgözlülük Endeksi</div>
+                  <div className="flex items-center gap-3">
+                    {fearGreedLoading && <div className="w-1.5 h-1.5 rounded-full spin" style={{ border: `1.5px solid ${COLORS.accent}`, borderTopColor: 'transparent' }} />}
+                    <div className="ui-font text-xs flex items-center gap-1.5" style={{ color: COLORS.textDimmer, letterSpacing: '0.1em' }}>
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: COLORS.textDimmer }} />
+                      KRIPTO
+                    </div>
+                  </div>
+                </div>
+
+                {fearGreedError && !fgStats ? (
+                  <div className="p-4 ui-font text-xs flex items-center gap-2" style={{ color: COLORS.textDim }}>
+                    <AlertCircle size={12} />{fearGreedError} — <button onClick={fetchFearGreed} className="underline" style={{ color: COLORS.textBright }}>tekrar dene</button>
+                  </div>
+                ) : !fgStats ? (
+                  <div className="p-4 flex items-center justify-center gap-2 ui-font text-xs" style={{ color: COLORS.textDim }}>
+                    <div className="w-3 h-3 rounded-full spin" style={{ border: `1.5px solid ${COLORS.textDim}`, borderTopColor: COLORS.accent }} />yükleniyor...
+                  </div>
+                ) : (
+                  <>
+                    {/* Gauge + timeframes (side by side on desktop, stacked on mobile) */}
+                    <div className="p-4 flex flex-col sm:flex-row items-center gap-4">
+                      {/* Gauge */}
+                      <div className="flex-shrink-0 w-full sm:w-auto" style={{ maxWidth: 200 }}>
+                        <FearGreedGauge value={fgStats.current} />
+                      </div>
+
+                      {/* Timeframe cards */}
+                      <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-2 gap-2">
+                        {[
+                          { label: 'ANLIK', sublabel: 'bugün', val: fgStats.current },
+                          { label: 'KISA VADE', sublabel: '7 günlük ort.', val: fgStats.avg7 },
+                          { label: 'ORTA VADE', sublabel: '30 günlük ort.', val: fgStats.avg30 },
+                          { label: 'UZUN VADE', sublabel: '90 günlük ort.', val: fgStats.avg90 },
+                        ].map(({ label, sublabel, val }) => {
+                          const c = getFGColor(val);
+                          const lbl = getFGLabel(val);
+                          const pct = val;
+                          return (
+                            <div key={label} className="p-3 flex flex-col gap-1.5" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.border}`, borderTop: `2px solid ${c}` }}>
+                              <div className="ui-font text-[9px] font-semibold" style={{ color: COLORS.textDim, letterSpacing: '0.2em' }}>{label}</div>
+                              <div className="num-font text-2xl font-bold leading-none" style={{ color: c }}>{val}</div>
+                              <div className="ui-font text-[10px]" style={{ color: c, opacity: 0.85 }}>{lbl}</div>
+                              <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: COLORS.border }}>
+                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: `linear-gradient(90deg, #FF4444 0%, #FFD700 50%, #22C55E 100%)`, backgroundSize: '300% 100%', backgroundPosition: `${100 - pct}% 0` }} />
+                              </div>
+                              <div className="ui-font text-[9px]" style={{ color: COLORS.textDimmer }}>{sublabel}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Mini bar chart + scale */}
+                    <div className="px-4 pb-4">
+                      <div className="ui-font text-[9px] mb-2 flex justify-between items-center" style={{ color: COLORS.textDimmer, letterSpacing: '0.15em' }}>
+                        <span>SON 90 GÜN</span>
+                        <span style={{ color: COLORS.textDimmer }}>alternative.me</span>
+                      </div>
+                      <FGMiniChart data={fgStats.history} />
+                      {/* Color scale legend */}
+                      <div className="mt-3 flex items-center gap-0.5">
+                        {[
+                          { label: 'Aş.Korku', color: '#FF4444', range: '0–24' },
+                          { label: 'Korku', color: '#FF8844', range: '25–44' },
+                          { label: 'Nötr', color: '#FFD700', range: '45–55' },
+                          { label: 'Açgöz.', color: '#7AE07A', range: '56–74' },
+                          { label: 'Aş.Açgöz.', color: '#22C55E', range: '75–100' },
+                        ].map(z => (
+                          <div key={z.label} className="flex-1 text-center py-1" style={{ background: `${z.color}18`, borderTop: `2px solid ${z.color}` }}>
+                            <div className="ui-font" style={{ fontSize: '8px', color: z.color, letterSpacing: '0.05em', lineHeight: 1.3 }}>{z.label}</div>
+                            <div className="num-font" style={{ fontSize: '8px', color: COLORS.textDimmer }}>{z.range}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
