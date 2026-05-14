@@ -31,10 +31,10 @@ const DEFAULT_ASSETS = [
   { id: 'solana', symbol: 'SOL', name: 'Solana', type: 'crypto', source: 'coingecko', cgId: 'solana' },
 ];
 
-export default function InvestmentPage({ 
-  onClose, 
-  investmentGoals = [], 
-  onUpdateGoals, 
+export default function InvestmentPage({
+  onClose,
+  investmentGoals = [],
+  onUpdateGoals,
   transactions = [],
   onUpdateTransactions,
   watchedAssets = [],
@@ -43,7 +43,11 @@ export default function InvestmentPage({
   onUpdateSnapshots,
   monthlyInvestmentBudget = 0,
   marketAssetConfig = [],
-  onUpdateMarketAssetConfig
+  onUpdateMarketAssetConfig,
+  showTutorial = false,
+  tutorialStep = 5,
+  onTutorialNext,
+  onTutorialSkip,
 }) {
   const [activeTab, setActiveTab] = useState('portfolio');
   const [prices, setPrices] = useState({});
@@ -85,6 +89,51 @@ export default function InvestmentPage({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+
+  const [invSpotlightRect, setInvSpotlightRect] = useState(null);
+
+  useEffect(() => {
+    if (!showTutorial || tutorialStep < 5 || tutorialStep > 7) {
+      setInvSpotlightRect(null);
+      return;
+    }
+    if (tutorialStep === 5) setActiveTab('market');
+    else if (tutorialStep === 6) setActiveTab('portfolio');
+    else if (tutorialStep === 7) setActiveTab('goals');
+
+    const targetIds = { 5: 'inv-tutorial-market-table', 6: 'inv-tutorial-portfolio-card', 7: 'inv-tutorial-goals-section' };
+    const targetId = targetIds[tutorialStep];
+    let prevEl = null;
+
+    const updateRect = () => {
+      const el = document.getElementById(targetId);
+      if (!el) { setInvSpotlightRect(null); return; }
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) { setInvSpotlightRect(null); return; }
+      setInvSpotlightRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+    };
+
+    const el = document.getElementById(targetId);
+    if (el) {
+      prevEl = el;
+      el.style.transform = 'scale(1.02)';
+      el.style.transition = 'transform 0.35s cubic-bezier(0.16,1,0.3,1)';
+      el.style.transformOrigin = 'center center';
+      setTimeout(() => {
+        updateRect();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 150);
+    }
+
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, { passive: true });
+
+    return () => {
+      if (prevEl) { prevEl.style.transform = ''; prevEl.style.transition = ''; }
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect);
+    };
+  }, [showTutorial, tutorialStep]);
 
   const allAssets = useMemo(() => {
     return [...DEFAULT_ASSETS, ...watchedAssets.filter(a => !DEFAULT_ASSETS.some(d => d.id === a.id))];
@@ -601,7 +650,7 @@ export default function InvestmentPage({
         {/* PORTFOLIO TAB */}
         {activeTab === 'portfolio' && (
           <div>
-            <div className="fade-up delay-3 mb-6 p-6 md:p-7" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.accent}` }}>
+            <div id="inv-tutorial-portfolio-card" className="fade-up delay-3 mb-6 p-6 md:p-7" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.accent}` }}>
               <div className="ui-font text-xs mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Toplam Portföy Değeri</div>
               <div className="num-font text-4xl md:text-5xl mb-3" style={{ color: COLORS.textBrightest, fontWeight: 500, letterSpacing: '-0.02em' }}>
                 {formatCurrency(portfolioValues.totalValue)}
@@ -888,7 +937,7 @@ export default function InvestmentPage({
               </div>
             ) : (
               /* NORMAL GÖRÜNÜM */
-              <div className="grid gap-2">
+              <div id="inv-tutorial-market-table" className="grid gap-2">
                 {orderedMarketAssets.map((asset, idx) => {
                   const p = prices[asset.id];
                   const change = p?.change;
@@ -935,7 +984,7 @@ export default function InvestmentPage({
 
         {/* GOALS TAB */}
         {activeTab === 'goals' && (
-          <div>
+          <div id="inv-tutorial-goals-section">
             <div className="flex items-center justify-between mb-5">
               <div className="ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>{investmentGoals.length} Hedef</div>
               <button onClick={() => { setEditingGoalId(null); setGoalName(''); setGoalAmount(''); setGoalCurrent(''); setGoalPeriod('yearly'); setShowGoalModal(true); }}
@@ -1203,6 +1252,94 @@ export default function InvestmentPage({
           </div>
         </div>
       )}
+
+      {/* TUTORIAL OVERLAY (steps 5-7) */}
+      {showTutorial && tutorialStep >= 5 && tutorialStep <= 7 && (() => {
+        const invSteps = [
+          null, null, null, null, null,
+          { icon: '📊', title: 'Canlı Piyasa Takibi', desc: 'Döviz, kripto para ve altın fiyatlarını anlık takip et. 24 saatlik değişim oranları renk kodlamasıyla görünür — yeşil artış, kırmızı düşüş demektir.' },
+          { icon: '💼', title: 'Portföy Takibi', desc: 'Al-sat işlemlerini kaydet, toplam portföy değerini ve kar/zarar oranını izle. Dönemsel performans verisi ile birikiminin büyüme seyrini gör.' },
+          { icon: '🎯', title: 'Yatırım Hedefleri', desc: 'Finansal hedef belirle ve ne kadar ilerlediğini takip et. Portföy değerine otomatik bağlanır veya manuel tutar girebilirsin.' },
+        ];
+        const s = invSteps[tutorialStep];
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        if (!invSpotlightRect) {
+          return (
+            <div key={tutorialStep} className="fixed inset-0 z-[200] flex items-end justify-center pb-8 px-4" style={{ backdropFilter: 'blur(6px)', background: 'rgba(0,0,0,0.8)', pointerEvents: 'none' }}>
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 w-full max-w-sm" style={{ pointerEvents: 'auto', animation: 'tutorial-card-enter 0.3s cubic-bezier(0.16,1,0.3,1) forwards' }}>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 text-lg">{s.icon}</div>
+                  <div><div className="font-semibold text-slate-800 text-sm mb-1">{s.title}</div><div className="text-slate-500 text-xs leading-relaxed">{s.desc}</div></div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <button onClick={onTutorialSkip} className="text-slate-400 text-xs hover:text-slate-600 transition-colors">Atla</button>
+                  <div className="flex items-center gap-1">{[1,2,3,4,5,6,7].map(n => (<div key={n} className={`rounded-full transition-all duration-200 ${n === tutorialStep ? 'w-4 h-2 bg-green-500' : 'w-2 h-2 bg-slate-200'}`} />))}</div>
+                  <button onClick={onTutorialNext} className="bg-green-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-green-600 transition-colors shadow-sm">{tutorialStep === 7 ? 'Tamamla ✓' : 'İleri →'}</button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        const pad = 12;
+        const t = invSpotlightRect.top - pad;
+        const l = invSpotlightRect.left - pad;
+        const b = invSpotlightRect.top + invSpotlightRect.height + pad;
+        const r = invSpotlightRect.left + invSpotlightRect.width + pad;
+        const cardW = Math.min(320, vw - 32);
+        const holeCenter = l + (r - l) / 2;
+        const cardLeft = Math.max(16, Math.min(holeCenter - cardW / 2, vw - cardW - 16));
+        const showBelow = b + 240 < vh;
+        const cardTop = showBelow ? b + 16 : Math.max(16, t - 240);
+        const arrowLeft = Math.max(16, Math.min(holeCenter - cardLeft - 8, cardW - 32));
+
+        return (
+          <div key={tutorialStep} className="fixed inset-0 z-[200]" style={{ pointerEvents: 'none' }}>
+            <div style={{
+              position: 'fixed', inset: 0,
+              background: 'rgba(0,0,0,0.82)',
+              backdropFilter: 'blur(5px)',
+              WebkitBackdropFilter: 'blur(5px)',
+              clipPath: `path('M 0 0 L ${vw} 0 L ${vw} ${vh} L 0 ${vh} Z M ${l} ${t} L ${l} ${b} L ${r} ${b} L ${r} ${t} Z')`,
+            }} />
+            <div style={{
+              position: 'fixed', top: t, left: l, width: r - l, height: b - t,
+              border: '2px solid rgba(122,224,122,0.85)',
+              borderRadius: 8,
+              animation: 'tutorial-glow-pulse 2s ease-in-out infinite',
+            }} />
+            <div style={{
+              position: 'fixed', top: cardTop, left: cardLeft, width: cardW,
+              zIndex: 201, pointerEvents: 'auto',
+              animation: 'tutorial-card-enter 0.3s cubic-bezier(0.16,1,0.3,1) forwards',
+            }} className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-5">
+              {showBelow ? (
+                <div style={{ position: 'absolute', top: -8, left: arrowLeft, width: 16, height: 16, background: 'white', borderTop: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0', transform: 'rotate(45deg)' }} />
+              ) : (
+                <div style={{ position: 'absolute', bottom: -8, left: arrowLeft, width: 16, height: 16, background: 'white', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', transform: 'rotate(45deg)' }} />
+              )}
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5 text-lg">{s.icon}</div>
+                <div>
+                  <div className="font-semibold text-slate-800 text-sm mb-1">{s.title}</div>
+                  <div className="text-slate-500 text-xs leading-relaxed">{s.desc}</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <button onClick={onTutorialSkip} className="text-slate-400 text-xs hover:text-slate-600 transition-colors">Atla</button>
+                <div className="flex items-center gap-1">
+                  {[1,2,3,4,5,6,7].map(n => (<div key={n} className={`rounded-full transition-all duration-200 ${n === tutorialStep ? 'w-4 h-2 bg-green-500' : 'w-2 h-2 bg-slate-200'}`} />))}
+                </div>
+                <button onClick={onTutorialNext} className="bg-green-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-green-600 transition-colors shadow-sm">
+                  {tutorialStep === 7 ? 'Tamamla ✓' : 'İleri →'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* CONFIRM DIALOG */}
       {confirmDialog && (

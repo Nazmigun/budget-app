@@ -206,14 +206,13 @@
 .delay-400 { animation-delay: 400ms; }
 .delay-500 { animation-delay: 500ms; }
 
-/* Tutorial overlay z-index classes */
-.tutorial-target {
-  position: relative !important;
-  z-index: 50 !important;
-  pointer-events: none;
+/* Tutorial spotlight animations */
+@keyframes tutorial-glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(34,197,94,0.3), 0 0 20px rgba(34,197,94,0.1); }
+  50% { box-shadow: 0 0 0 5px rgba(34,197,94,0.55), 0 0 35px rgba(34,197,94,0.25); }
 }
 
-.tutorial-target-interactive {
-  position: relative !important;
-  z-index: 50 !important;
+@keyframes tutorial-card-enter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }

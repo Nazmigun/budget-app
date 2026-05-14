@@ -15,6 +15,7 @@ export default function App() {
     const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [tutorialCompleted, setTutorialCompleted] = useState(true);
+  const [spotlightRect, setSpotlightRect] = useState(null);
 
   const [step, setStep] = useState('setup'); // setup, dashboard
   const [salary, setSalary] = useState('');
@@ -316,18 +317,62 @@ export default function App() {
   }, [step, tutorialCompleted, hasLoaded]);
 
   const nextTutorialStep = () => {
-    if (tutorialStep >= 4) {
+    if (tutorialStep === 4) {
+      setShowInvestment(true);
+      setTutorialStep(5);
+    } else if (tutorialStep >= 7) {
       setShowTutorial(false);
       setTutorialCompleted(true);
+      setSpotlightRect(null);
     } else {
-      setTutorialStep(tutorialStep + 1);
+      setTutorialStep(prev => prev + 1);
     }
   };
 
   const skipTutorial = () => {
     setShowTutorial(false);
     setTutorialCompleted(true);
+    setSpotlightRect(null);
   };
+
+  useEffect(() => {
+    if (!showTutorial || tutorialStep < 1 || tutorialStep > 4) {
+      setSpotlightRect(null);
+      return;
+    }
+    const targetIds = { 1: 'tutorial-budget-card', 2: 'tutorial-add-btn', 3: 'tutorial-calendar-btn', 4: 'tutorial-investment-btn' };
+    const targetId = targetIds[tutorialStep];
+    let prevEl = null;
+
+    const updateRect = () => {
+      const el = document.getElementById(targetId);
+      if (!el) { setSpotlightRect(null); return; }
+      const rect = el.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) { setSpotlightRect(null); return; }
+      setSpotlightRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+    };
+
+    const el = document.getElementById(targetId);
+    if (el) {
+      prevEl = el;
+      el.style.transform = 'scale(1.04)';
+      el.style.transition = 'transform 0.35s cubic-bezier(0.16,1,0.3,1)';
+      el.style.transformOrigin = 'center center';
+      requestAnimationFrame(() => {
+        updateRect();
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
+
+    window.addEventListener('resize', updateRect);
+    window.addEventListener('scroll', updateRect, { passive: true });
+
+    return () => {
+      if (prevEl) { prevEl.style.transform = ''; prevEl.style.transition = ''; }
+      window.removeEventListener('resize', updateRect);
+      window.removeEventListener('scroll', updateRect);
+    };
+  }, [showTutorial, tutorialStep]);
 const handleLogout = async () => {
     if (saveTimeoutRef.current) {
       // Bekleyen kaydetme varsa hemen yap
@@ -901,7 +946,7 @@ const handleLogout = async () => {
   // Yatırım sayfası gösteriliyorsa onu render et
   if (showInvestment) {
     return (
-      <InvestmentPage 
+      <InvestmentPage
         onClose={() => setShowInvestment(false)}
         investmentGoals={investmentGoals}
         onUpdateGoals={setInvestmentGoals}
@@ -914,6 +959,10 @@ const handleLogout = async () => {
         monthlyInvestmentBudget={calculations.invAmount}
         marketAssetConfig={marketAssetConfig}
         onUpdateMarketAssetConfig={setMarketAssetConfig}
+        showTutorial={showTutorial && tutorialStep >= 5}
+        tutorialStep={tutorialStep}
+        onTutorialNext={nextTutorialStep}
+        onTutorialSkip={skipTutorial}
       />
     );
   }
@@ -935,7 +984,7 @@ const handleLogout = async () => {
             <button onClick={() => { setShowTutorial(true); setTutorialStep(1); }} aria-label="Yardım" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
               <span className="material-symbols-outlined">help</span>
             </button>
-            <button onClick={() => { setCalendarMonth(new Date().getMonth()); setCalendarYear(new Date().getFullYear()); setShowCalendar(true); }} aria-label="Takvim" className={`w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary ${showTutorial && tutorialStep === 3 ? 'tutorial-target-interactive' : ''}`}>
+            <button id="tutorial-calendar-btn" onClick={() => { setCalendarMonth(new Date().getMonth()); setCalendarYear(new Date().getFullYear()); setShowCalendar(true); }} aria-label="Takvim" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary">
               <span className="material-symbols-outlined">event</span>
             </button>
             <button onClick={() => setStep('setup')} aria-label="Ayarlar" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors text-primary">
@@ -955,7 +1004,7 @@ const handleLogout = async () => {
         </div>
 
         {/* Hero Card: Today's Budget */}
-        <section className={`bg-surface-container-lowest rounded-xl shadow-sm p-6 flex flex-col relative overflow-hidden group ${showTutorial && tutorialStep === 1 ? 'tutorial-target' : ''}`}>
+        <section id="tutorial-budget-card" className="bg-surface-container-lowest rounded-xl shadow-sm p-6 flex flex-col relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary-container opacity-5 rounded-bl-full pointer-events-none transition-transform group-hover:scale-110 duration-500"></div>
           <h2 className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">BUGÜN KALAN</h2>
           <div className="mt-4 flex items-baseline gap-2">
@@ -1030,7 +1079,8 @@ const handleLogout = async () => {
             </h3>
             <button
               onClick={() => setShowExpenseModal(true)}
-              className={`font-label-caps text-label-caps bg-primary-container text-on-primary-fixed hover:brightness-105 transition-all flex items-center gap-1 px-3 py-1.5 rounded-lg shadow-sm ${showTutorial && tutorialStep === 2 ? 'tutorial-target-interactive' : ''}`}
+              id="tutorial-add-btn"
+              className="font-label-caps text-label-caps bg-primary-container text-on-primary-fixed hover:brightness-105 transition-all flex items-center gap-1 px-3 py-1.5 rounded-lg shadow-sm"
             >
               <span className="material-symbols-outlined text-[16px]">add</span> Ekle
             </button>
@@ -1120,7 +1170,7 @@ const handleLogout = async () => {
           <span className="material-symbols-outlined text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>payments</span>
           <span className="font-body-sm text-body-sm text-[11px] mt-1 font-medium">Bütçe</span>
         </button>
-        <button onClick={() => setShowInvestment(true)} className={`flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface rounded-xl px-4 py-2 ${showTutorial && tutorialStep === 4 ? 'tutorial-target-interactive' : ''}`}>
+        <button id="tutorial-investment-btn" onClick={() => setShowInvestment(true)} className="flex flex-col items-center justify-center text-on-surface-variant hover:text-on-surface rounded-xl px-4 py-2">
           <span className="material-symbols-outlined text-[24px]">trending_up</span>
           <span className="font-body-sm text-body-sm text-[11px] mt-1 font-medium">Yatırım</span>
         </button>
@@ -2250,46 +2300,95 @@ const handleLogout = async () => {
         </div>
       )}
     
-      {showTutorial && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" style={{ backdropFilter: 'blur(8px)', background: 'rgba(248, 250, 252, 0.75)' }}>
-          <div className="bg-white w-full max-w-sm p-6 rounded-2xl shadow-2xl animate-fade-up border border-[#E2E8F0]">
-            <div className="w-10 h-10 rounded-full bg-[#DCFCE7] flex items-center justify-center mb-4">
-              <span className="material-symbols-outlined text-[#22C55E] text-[20px]">
-                {tutorialStep === 1 ? 'payments' : tutorialStep === 2 ? 'add_circle' : tutorialStep === 3 ? 'calendar_month' : 'trending_up'}
-              </span>
-            </div>
-              <div className="text-[#22C55E] font-display font-semibold mb-2 text-lg">
-                {tutorialStep === 1 && "Günlük Bütçen"}
-                {tutorialStep === 2 && "Harcama Ekle"}
-                {tutorialStep === 3 && "Takvim ve Geçmiş"}
-                {tutorialStep === 4 && "Yatırım Modu"}
-              </div>
-              <div className="text-[#64748B] font-sans text-sm mb-6 leading-relaxed">
-                {tutorialStep === 1 && "Burası senin ana hedefin. Her gün bu tutarın altında kalmaya çalışarak ay sonunu rahat getirebilirsin."}
-                {tutorialStep === 2 && "Yaptığın harcamaları buradan ekle. Her harcama günlük bütçenden düşer."}
-                {tutorialStep === 3 && "Önceki günleri ve ayın genel özetini buradan görebilir, unuttuğun harcamaları girebilirsin."}
-                {tutorialStep === 4 && "Tasarruflarını büyütmek için yatırım terminaline geçiş yap. Güçlü analizler seni bekliyor."}
-              </div>
-              <div className="flex justify-between items-center">
-                <button onClick={skipTutorial} className="text-[#64748B] text-xs font-sans hover:text-[#0F172A]">Atla</button>
-                <div className="flex gap-1">
-                  {[1,2,3,4].map(s => (
-                    <div key={s} className={`w-2 h-2 rounded-full ${s === tutorialStep ? 'bg-[#22C55E]' : 'bg-[#E2E8F0]'}`} />
-                  ))}
+      {showTutorial && tutorialStep >= 1 && tutorialStep <= 4 && (() => {
+        const steps = [
+          null,
+          { icon: 'payments', title: 'Günlük Bütçe Kartı', desc: 'Bugün harcayabileceğin maksimum tutarı gösterir. İlerleme çubuğu günlük limitine ne kadar yakın olduğunu yansıtır — kırmızıya dönerse bütçeni aştın demektir.' },
+          { icon: 'add_circle', title: 'Harcama Ekle', desc: 'Bu butonla harcamalarını saniyeler içinde kaydet. Kategori, not ve tutar girebilirsin. Her kayıt otomatik olarak buluta senkronize edilir.' },
+          { icon: 'calendar_month', title: 'Takvim ve Geçmiş', desc: 'Geçmiş günlerin harcamalarını gözden geçir. Unuttuğun bir gideri girebilir, aylık harcama özetini inceleyebilirsin.' },
+          { icon: 'trending_up', title: 'Yatırım Terminali', desc: 'Bir sonraki adımda yatırım bölümünü keşfedeceksin. Canlı piyasa verileri, portföy takibi ve finansal hedefler seni bekliyor.' },
+        ];
+        const s = steps[tutorialStep];
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+
+        if (!spotlightRect) {
+          return (
+            <div key={tutorialStep} className="fixed inset-0 z-[100] flex items-end justify-center pb-8 px-4" style={{ backdropFilter: 'blur(6px)', background: 'rgba(15,23,42,0.7)', pointerEvents: 'none' }}>
+              <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 w-full max-w-sm" style={{ pointerEvents: 'auto', animation: 'tutorial-card-enter 0.3s cubic-bezier(0.16,1,0.3,1) forwards' }}>
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0"><span className="material-symbols-outlined text-green-500 text-[18px]">{s.icon}</span></div>
+                  <div><div className="font-semibold text-slate-800 text-sm mb-1">{s.title}</div><div className="text-slate-500 text-xs leading-relaxed">{s.desc}</div></div>
                 </div>
-                {tutorialStep === 4 ? (
-                  <button onClick={() => { skipTutorial(); setShowInvestment(true); }} className="bg-primary-container text-on-primary-fixed px-4 py-2 rounded-xl text-xs font-bold hover:brightness-110 transition-colors shadow-sm">
-                    Yatırıma Geç
-                  </button>
-                ) : (
-                  <button onClick={nextTutorialStep} className="bg-[#22C55E] text-white px-4 py-2 rounded-xl text-xs font-bold hover:brightness-105 transition-all shadow-sm">
-                    İleri
-                  </button>
-                )}
+                <div className="flex items-center justify-between">
+                  <button onClick={skipTutorial} className="text-slate-400 text-xs hover:text-slate-600 transition-colors">Atla</button>
+                  <div className="flex items-center gap-1">{[1,2,3,4,5,6,7].map(n => (<div key={n} className={`rounded-full transition-all duration-200 ${n === tutorialStep ? 'w-4 h-2 bg-green-500' : 'w-2 h-2 bg-slate-200'}`} />))}</div>
+                  <button onClick={nextTutorialStep} className="bg-green-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-green-600 transition-colors shadow-sm">{tutorialStep === 4 ? 'Yatırıma Geç →' : 'İleri →'}</button>
+                </div>
               </div>
+            </div>
+          );
+        }
+
+        const pad = 12;
+        const t = spotlightRect.top - pad;
+        const l = spotlightRect.left - pad;
+        const b = spotlightRect.top + spotlightRect.height + pad;
+        const r = spotlightRect.left + spotlightRect.width + pad;
+        const cardW = Math.min(320, vw - 32);
+        const holeCenter = l + (r - l) / 2;
+        const cardLeft = Math.max(16, Math.min(holeCenter - cardW / 2, vw - cardW - 16));
+        const showBelow = b + 240 < vh;
+        const cardTop = showBelow ? b + 16 : Math.max(16, t - 240);
+        const arrowLeft = Math.max(16, Math.min(holeCenter - cardLeft - 8, cardW - 32));
+
+        return (
+          <div key={tutorialStep} className="fixed inset-0 z-[100]" style={{ pointerEvents: 'none' }}>
+            <div style={{
+              position: 'fixed', inset: 0,
+              background: 'rgba(15,23,42,0.72)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+              clipPath: `path('M 0 0 L ${vw} 0 L ${vw} ${vh} L 0 ${vh} Z M ${l} ${t} L ${l} ${b} L ${r} ${b} L ${r} ${t} Z')`,
+            }} />
+            <div style={{
+              position: 'fixed', top: t, left: l, width: r - l, height: b - t,
+              border: '2px solid rgba(34,197,94,0.85)',
+              borderRadius: 14,
+              animation: 'tutorial-glow-pulse 2s ease-in-out infinite',
+            }} />
+            <div style={{
+              position: 'fixed', top: cardTop, left: cardLeft, width: cardW,
+              zIndex: 101, pointerEvents: 'auto',
+              animation: 'tutorial-card-enter 0.3s cubic-bezier(0.16,1,0.3,1) forwards',
+            }} className="bg-white rounded-2xl shadow-2xl border border-slate-200 p-5">
+              {showBelow ? (
+                <div style={{ position: 'absolute', top: -8, left: arrowLeft, width: 16, height: 16, background: 'white', borderTop: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0', transform: 'rotate(45deg)' }} />
+              ) : (
+                <div style={{ position: 'absolute', bottom: -8, left: arrowLeft, width: 16, height: 16, background: 'white', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0', transform: 'rotate(45deg)' }} />
+              )}
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined text-green-500 text-[18px]">{s.icon}</span>
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-800 text-sm mb-1">{s.title}</div>
+                  <div className="text-slate-500 text-xs leading-relaxed">{s.desc}</div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <button onClick={skipTutorial} className="text-slate-400 text-xs hover:text-slate-600 transition-colors">Atla</button>
+                <div className="flex items-center gap-1">
+                  {[1,2,3,4,5,6,7].map(n => (<div key={n} className={`rounded-full transition-all duration-200 ${n === tutorialStep ? 'w-4 h-2 bg-green-500' : 'w-2 h-2 bg-slate-200'}`} />))}
+                </div>
+                <button onClick={nextTutorialStep} className="bg-green-500 text-white px-4 py-1.5 rounded-xl text-xs font-bold hover:bg-green-600 transition-colors shadow-sm">
+                  {tutorialStep === 4 ? 'Yatırıma Geç →' : 'İleri →'}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 </div>
   );
 }
