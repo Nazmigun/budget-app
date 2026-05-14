@@ -89,13 +89,40 @@ const FGMiniChart = ({ data }) => {
 };
 
 const DEFAULT_ASSETS = [
+  // Döviz / Altın
   { id: 'usd', symbol: 'USD', name: 'ABD Doları', type: 'fiat', source: 'frankfurter' },
   { id: 'eur', symbol: 'EUR', name: 'Euro', type: 'fiat', source: 'frankfurter' },
   { id: 'gbp', symbol: 'GBP', name: 'İngiliz Sterlini', type: 'fiat', source: 'frankfurter' },
   { id: 'gold', symbol: 'GRAM', name: 'Gram Altın', type: 'commodity', source: 'gold' },
+  // Kripto
   { id: 'bitcoin', symbol: 'BTC', name: 'Bitcoin', type: 'crypto', source: 'coingecko', cgId: 'bitcoin' },
   { id: 'ethereum', symbol: 'ETH', name: 'Ethereum', type: 'crypto', source: 'coingecko', cgId: 'ethereum' },
   { id: 'solana', symbol: 'SOL', name: 'Solana', type: 'crypto', source: 'coingecko', cgId: 'solana' },
+  // BIST Hisseleri
+  { id: 'GARAN', symbol: 'GARAN', name: 'Garanti BBVA', type: 'bist', source: 'yahoo', yahooSymbol: 'GARAN.IS' },
+  { id: 'THYAO', symbol: 'THYAO', name: 'Türk Hava Yolları', type: 'bist', source: 'yahoo', yahooSymbol: 'THYAO.IS' },
+  { id: 'ASELS', symbol: 'ASELS', name: 'Aselsan', type: 'bist', source: 'yahoo', yahooSymbol: 'ASELS.IS' },
+  { id: 'AKBNK', symbol: 'AKBNK', name: 'Akbank', type: 'bist', source: 'yahoo', yahooSymbol: 'AKBNK.IS' },
+  { id: 'EREGL', symbol: 'EREGL', name: 'Ereğli Demir Çelik', type: 'bist', source: 'yahoo', yahooSymbol: 'EREGL.IS' },
+  { id: 'KCHOL', symbol: 'KCHOL', name: 'Koç Holding', type: 'bist', source: 'yahoo', yahooSymbol: 'KCHOL.IS' },
+  { id: 'BIMAS', symbol: 'BIMAS', name: 'BİM', type: 'bist', source: 'yahoo', yahooSymbol: 'BIMAS.IS' },
+  { id: 'SAHOL', symbol: 'SAHOL', name: 'Sabancı Holding', type: 'bist', source: 'yahoo', yahooSymbol: 'SAHOL.IS' },
+  { id: 'SISE', symbol: 'SISE', name: 'Şişe Cam', type: 'bist', source: 'yahoo', yahooSymbol: 'SISE.IS' },
+  { id: 'YKBNK', symbol: 'YKBNK', name: 'Yapı Kredi', type: 'bist', source: 'yahoo', yahooSymbol: 'YKBNK.IS' },
+  // ABD / NASDAQ
+  { id: 'AAPL', symbol: 'AAPL', name: 'Apple', type: 'nasdaq', source: 'yahoo', yahooSymbol: 'AAPL' },
+  { id: 'MSFT', symbol: 'MSFT', name: 'Microsoft', type: 'nasdaq', source: 'yahoo', yahooSymbol: 'MSFT' },
+  { id: 'NVDA', symbol: 'NVDA', name: 'NVIDIA', type: 'nasdaq', source: 'yahoo', yahooSymbol: 'NVDA' },
+  { id: 'TSLA', symbol: 'TSLA', name: 'Tesla', type: 'nasdaq', source: 'yahoo', yahooSymbol: 'TSLA' },
+  { id: 'AMZN', symbol: 'AMZN', name: 'Amazon', type: 'nasdaq', source: 'yahoo', yahooSymbol: 'AMZN' },
+  { id: 'GOOGL', symbol: 'GOOGL', name: 'Alphabet', type: 'nasdaq', source: 'yahoo', yahooSymbol: 'GOOGL' },
+  { id: 'META', symbol: 'META', name: 'Meta', type: 'nasdaq', source: 'yahoo', yahooSymbol: 'META' },
+  // Türk Yatırım Fonları (TEFAS)
+  { id: 'AGB', symbol: 'AGB', name: 'Ak Port. Altın BYF', type: 'turkishfund', source: 'tefas', tefasCode: 'AGB' },
+  { id: 'TI2', symbol: 'TI2', name: 'İş Port. His. Senedi', type: 'turkishfund', source: 'tefas', tefasCode: 'TI2' },
+  { id: 'AFY', symbol: 'AFY', name: 'Ak Port. Yab. BYF', type: 'turkishfund', source: 'tefas', tefasCode: 'AFY' },
+  { id: 'GAF', symbol: 'GAF', name: 'Garanti Port. His.', type: 'turkishfund', source: 'tefas', tefasCode: 'GAF' },
+  { id: 'GIH', symbol: 'GIH', name: 'Garanti Port. Altın', type: 'turkishfund', source: 'tefas', tefasCode: 'GIH' },
 ];
 
 export default function InvestmentPage({
@@ -160,6 +187,8 @@ export default function InvestmentPage({
   const [fearGreedData, setFearGreedData] = useState(null);
   const [fearGreedLoading, setFearGreedLoading] = useState(false);
   const [fearGreedError, setFearGreedError] = useState(null);
+  const [marketFilter, setMarketFilter] = useState('all');
+  const [stocksError, setStocksError] = useState(null);
 
   const [invSpotlightRect, setInvSpotlightRect] = useState(null);
 
@@ -229,6 +258,12 @@ export default function InvestmentPage({
     });
     return ordered;
   }, [allAssets, marketAssetConfig]);
+
+  const filteredMarketAssets = useMemo(() => {
+    const typeMap = { crypto: ['crypto', 'commodity', 'fiat'], bist: ['bist'], nasdaq: ['nasdaq'], fund: ['turkishfund'] };
+    if (marketFilter === 'all') return orderedMarketAssets;
+    return orderedMarketAssets.filter(a => (typeMap[marketFilter] || []).includes(a.type));
+  }, [orderedMarketAssets, marketFilter]);
 
   // Düzenleme modunda tüm varlıkları (görünür + gizli) göster
   const allMarketAssetsForEdit = useMemo(() => {
@@ -389,10 +424,93 @@ export default function InvestmentPage({
     }
   };
 
+  const fetchStocksAndFunds = async (usdTryOverride) => {
+    setStocksError(null);
+    // --- USD/TRY kuru ---
+    let usdTry = usdTryOverride || prices.usd?.try;
+    if (!usdTry) {
+      try {
+        const r = await fetch('https://api.frankfurter.dev/v1/latest?base=USD&symbols=TRY');
+        const d = await r.json();
+        usdTry = d.rates?.TRY || 38;
+      } catch { usdTry = 38; }
+    }
+
+    // --- Yahoo Finance: BIST + NASDAQ ---
+    const yahooAssets = allAssets.filter(a => a.source === 'yahoo');
+    if (yahooAssets.length > 0) {
+      const symbols = yahooAssets.map(a => a.yahooSymbol).join(',');
+      let result = null;
+      const tryFetch = async (base) => {
+        const r = await fetch(`${base}/v7/finance/quote?symbols=${encodeURIComponent(symbols)}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      };
+      try {
+        const data = await tryFetch('https://query1.finance.yahoo.com');
+        result = data.quoteResponse?.result;
+      } catch {
+        try {
+          const data = await tryFetch('https://query2.finance.yahoo.com');
+          result = data.quoteResponse?.result;
+        } catch (e) {
+          console.warn('Yahoo Finance ulaşılamıyor:', e.message);
+          setStocksError('Hisse verileri alınamadı (Yahoo Finance)');
+        }
+      }
+      if (result?.length > 0) {
+        const updates = {};
+        result.forEach(q => {
+          const asset = yahooAssets.find(a => a.yahooSymbol === q.symbol);
+          if (!asset) return;
+          const price = q.regularMarketPrice;
+          const change = q.regularMarketChangePercent || 0;
+          updates[asset.id] = {
+            try: q.currency === 'USD' ? price * usdTry : price,
+            usd: q.currency === 'USD' ? price : undefined,
+            change,
+          };
+        });
+        setPrices(prev => ({ ...prev, ...updates }));
+        setLastUpdate(new Date());
+      }
+    }
+
+    // --- TEFAS: Türk Yatırım Fonları ---
+    const tefasAssets = allAssets.filter(a => a.source === 'tefas');
+    if (tefasAssets.length > 0) {
+      const today = new Date();
+      const fmt = (d) => d.toISOString().split('T')[0].replace(/-/g, '');
+      const endDate = fmt(today);
+      const startDate = fmt(new Date(today - 3 * 86400000));
+      await Promise.allSettled(tefasAssets.map(async (asset) => {
+        try {
+          const r = await fetch(
+            `https://www.tefas.gov.tr/api/DB/BindHistoryInfo?fontip=YAT&sfonkod=${asset.tefasCode}&bastarih=${startDate}&bittarih=${endDate}`
+          );
+          if (!r.ok) return;
+          const d = await r.json();
+          if (d.data?.length > 0) {
+            const items = d.data;
+            const latest = items[items.length - 1];
+            const prev = items.length > 1 ? items[items.length - 2] : latest;
+            const price = parseFloat(latest.FIYAT);
+            const prevPrice = parseFloat(prev.FIYAT);
+            if (!isNaN(price)) {
+              const change = prevPrice > 0 ? ((price - prevPrice) / prevPrice) * 100 : 0;
+              setPrices(p => ({ ...p, [asset.id]: { try: price, change } }));
+            }
+          }
+        } catch (e) { console.warn(`TEFAS ${asset.tefasCode}:`, e.message); }
+      }));
+    }
+  };
+
   useEffect(() => {
     fetchPrices();
+    fetchStocksAndFunds();
     fetchFearGreed();
-    const interval = setInterval(() => { fetchPrices(); fetchFearGreed(); }, 5 * 60 * 1000);
+    const interval = setInterval(() => { fetchPrices(); fetchStocksAndFunds(); fetchFearGreed(); }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [allAssets.length]);
 
@@ -960,9 +1078,27 @@ export default function InvestmentPage({
         {/* MARKET TAB */}
         {activeTab === 'market' && (
           <div>
-            <div className="flex items-center justify-between mb-5">
+            {/* Filtre sekmeleri */}
+            <div className="flex gap-1 overflow-x-auto pb-2 mb-3" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              {[
+                { id: 'all', label: 'Tümü' },
+                { id: 'crypto', label: 'Kripto/Döviz' },
+                { id: 'bist', label: '📈 BIST' },
+                { id: 'nasdaq', label: '🇺🇸 ABD' },
+                { id: 'fund', label: 'T. Fonlar' },
+              ].map(f => (
+                <button key={f.id} onClick={() => setMarketFilter(f.id)}
+                  className="ui-font flex-shrink-0 text-xs px-3 py-1.5 transition-all"
+                  style={{ background: marketFilter === f.id ? COLORS.accent : 'transparent', color: marketFilter === f.id ? COLORS.bg : COLORS.textBright, border: `1px solid ${marketFilter === f.id ? COLORS.accent : COLORS.border}`, letterSpacing: '0.08em', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between mb-4">
               <div className="ui-font text-xs" style={{ color: COLORS.textDim }}>
                 {lastUpdate ? `Son: ${lastUpdate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}` : 'Yükleniyor...'}
+                {stocksError && <span style={{ color: COLORS.negative, marginLeft: 8 }}>⚠ Hisse verileri kısmi</span>}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setMarketEditMode(!marketEditMode)} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
@@ -973,9 +1109,9 @@ export default function InvestmentPage({
                   <>
                     <button onClick={() => setShowAddAssetModal(true)} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
                       style={{ background: COLORS.accent, color: COLORS.bg, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-                      <Plus size={11} />Coin Ekle
+                      <Plus size={11} />Ekle
                     </button>
-                    <button onClick={fetchPrices} disabled={pricesLoading} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
+                    <button onClick={() => { fetchPrices(); fetchStocksAndFunds(); }} disabled={pricesLoading} className="ui-font flex items-center gap-1.5 text-xs px-3 py-2 transition-all"
                       style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright, background: 'transparent', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500 }}>
                       <RefreshCw size={11} className={pricesLoading ? 'spin' : ''} />Yenile
                     </button>
@@ -991,7 +1127,7 @@ export default function InvestmentPage({
             )}
 
             {/* FEAR & GREED KARTI */}
-            {!marketEditMode && (
+            {!marketEditMode && (marketFilter === 'all' || marketFilter === 'crypto') && (
               <div className="mb-5" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${fgStats ? getFGColor(fgStats.current) : COLORS.accent}` }}>
                 <div className="p-4 pb-0 flex items-center justify-between">
                   <div className="ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.25em', textTransform: 'uppercase' }}>▌ Korku &amp; Açgözlülük Endeksi</div>
@@ -1124,46 +1260,75 @@ export default function InvestmentPage({
             ) : (
               /* NORMAL GÖRÜNÜM */
               <div id="inv-tutorial-market-table" className="grid gap-2">
-                {orderedMarketAssets.map((asset, idx) => {
+                {filteredMarketAssets.map((asset, idx) => {
                   const p = prices[asset.id];
                   const change = p?.change;
+                  const typeMeta = {
+                    bist: { label: 'BIST', color: '#F59E0B' },
+                    nasdaq: { label: 'ABD', color: '#60A5FA' },
+                    crypto: { label: 'KRİPTO', color: COLORS.accent },
+                    fiat: { label: 'DÖVİZ', color: '#94A3B8' },
+                    commodity: { label: 'ALTIN', color: COLORS.gold },
+                    turkishfund: { label: 'FON', color: '#F472B6' },
+                  }[asset.type] || { label: asset.type, color: COLORS.textDim };
                   return (
-                    <div key={asset.id} className={`fade-up delay-${Math.min(idx + 1, 8)} p-4`}
-                      style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.accent}` }}>
-                      <div className="flex items-center justify-between gap-3">
+                    <div key={asset.id} className={`fade-up delay-${Math.min(idx + 1, 8)}`}
+                      style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${typeMeta.color}` }}>
+                      <div className="flex items-center gap-3 p-3">
+                        {/* Sol: sembol + isim + tip badge */}
                         <div className="min-w-0 flex-1">
-                          <div className="num-font text-xs mb-0.5" style={{ color: COLORS.textDim, letterSpacing: '0.1em' }}>{asset.symbol}</div>
-                          <div className="ui-font text-sm truncate" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{asset.name}</div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <div className="num-font text-base" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>
-                            {p?.try ? formatCurrency(p.try) : '—'}
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="num-font text-xs font-bold" style={{ color: typeMeta.color }}>{asset.symbol}</span>
+                            <span className="ui-font px-1 py-0.5 text-[8px] font-bold rounded-sm" style={{ background: `${typeMeta.color}22`, color: typeMeta.color, letterSpacing: '0.08em' }}>{typeMeta.label}</span>
                           </div>
-                          {change !== undefined && change !== 0 && (
-                            <div className="num-font text-xs flex items-center justify-end gap-1" style={{ color: change > 0 ? COLORS.positive : COLORS.negative }}>
-                              {change > 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                              {change.toFixed(2)}%
-                            </div>
+                          <div className="ui-font text-xs truncate" style={{ color: COLORS.textBright }}>{asset.name}</div>
+                        </div>
+                        {/* Sağ: fiyat + değişim */}
+                        <div className="text-right flex-shrink-0">
+                          {p?.try ? (
+                            <>
+                              <div className="num-font text-sm font-bold" style={{ color: COLORS.textBrightest }}>{formatCurrency(p.try)}</div>
+                              {asset.type === 'nasdaq' && p.usd && (
+                                <div className="num-font text-[10px]" style={{ color: COLORS.textDimmer }}>${p.usd.toLocaleString('en-US', { maximumFractionDigits: 2 })}</div>
+                              )}
+                              {change !== undefined && change !== 0 && (
+                                <div className="num-font text-xs flex items-center justify-end gap-0.5 mt-0.5" style={{ color: change > 0 ? COLORS.positive : COLORS.negative }}>
+                                  {change > 0 ? <TrendingUp size={9} /> : <TrendingDown size={9} />}
+                                  {change > 0 ? '+' : ''}{change.toFixed(2)}%
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="num-font text-sm" style={{ color: COLORS.textDimmer }}>—</div>
                           )}
                         </div>
+                        {/* Portföye ekle butonu */}
+                        <button
+                          onClick={() => { setEditingTx(null); setTxType('buy'); setTxAssetId(asset.id); setTxAmount(''); setTxPrice(p?.try ? p.try.toFixed(2) : ''); setTxDate(new Date().toISOString().split('T')[0]); setShowTxModal(true); }}
+                          className="flex-shrink-0 w-7 h-7 flex items-center justify-center transition-all"
+                          style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.accent }}
+                          title="Portföye ekle (simüle al/sat)">
+                          <Plus size={12} />
+                        </button>
                       </div>
                     </div>
                   );
                 })}
-                {orderedMarketAssets.length === 0 && (
+                {filteredMarketAssets.length === 0 && (
                   <div className="text-center py-12 px-6" style={{ background: COLORS.bgPanel, border: `1px dashed ${COLORS.border}` }}>
                     <BarChart3 size={32} className="mx-auto mb-3" style={{ color: COLORS.textDim }} />
-                    <div className="ui-font text-sm mb-2" style={{ color: COLORS.textBright }}>Piyasa listesi boş</div>
+                    <div className="ui-font text-sm mb-2" style={{ color: COLORS.textBright }}>Bu kategoride varlık yok</div>
                     <div className="ui-font text-xs" style={{ color: COLORS.textDim, lineHeight: 1.5 }}>
-                      "Düzenle" butonundan gizlenen varlıkları açabilir veya "Coin Ekle" ile yeni varlık ekleyebilirsin.
+                      "Düzenle" ile gizlenenleri açabilir veya "Ekle" ile yeni varlık ekleyebilirsin.
                     </div>
                   </div>
                 )}
               </div>
             )}
 
-            <div className="mt-6 p-3 ui-font text-xs" style={{ color: COLORS.textDimmer, lineHeight: 1.5 }}>
-              Veri kaynakları: Frankfurter (döviz), CoinGecko (kripto, altın). 5 dakikada bir otomatik güncellenir.
+            <div className="mt-6 p-3 ui-font text-xs" style={{ color: COLORS.textDimmer, lineHeight: 1.7 }}>
+              <strong style={{ color: COLORS.textDim }}>Veri kaynakları:</strong> Frankfurter (döviz) · CoinGecko (kripto/altın) · Yahoo Finance (BIST/ABD) · TEFAS (T. Fonlar) · alternative.me (F&G)
+              <br />Simülasyon amaçlıdır, gerçek yatırım tavsiyesi değildir. 5 dakikada bir otomatik güncellenir.
             </div>
           </div>
         )}
@@ -1280,10 +1445,32 @@ export default function InvestmentPage({
 
             <div className="mb-4">
               <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Varlık</label>
-              <select value={txAssetId} onChange={(e) => { setTxAssetId(e.target.value); const p = prices[e.target.value]?.try; if (p && !txPrice) setTxPrice(p.toFixed(2)); }}
-                className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBright, fontSize: '14px' }}>
-                <option value="">Seç...</option>
-                {allAssets.map(a => (<option key={a.id} value={a.id} style={{ background: COLORS.bgPanel }}>{a.symbol} — {a.name}</option>))}
+              <select value={txAssetId} onChange={(e) => { setTxAssetId(e.target.value); const p = prices[e.target.value]?.try; if (p) setTxPrice(p.toFixed(2)); }}
+                className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBright, fontSize: '13px' }}>
+                <option value="">Varlık seç...</option>
+                {[
+                  { key: 'crypto', label: '── Kripto Para ──', types: ['crypto'] },
+                  { key: 'fiat', label: '── Döviz / Altın ──', types: ['fiat', 'commodity'] },
+                  { key: 'bist', label: '── BIST Hisseleri ──', types: ['bist'] },
+                  { key: 'nasdaq', label: '── ABD Hisseleri (NASDAQ) ──', types: ['nasdaq'] },
+                  { key: 'fund', label: '── Türk Yatırım Fonları ──', types: ['turkishfund'] },
+                ].map(group => {
+                  const groupAssets = allAssets.filter(a => group.types.includes(a.type));
+                  if (groupAssets.length === 0) return null;
+                  return (
+                    <optgroup key={group.key} label={group.label} style={{ background: COLORS.bgPanelLight, color: COLORS.textDim }}>
+                      {groupAssets.map(a => {
+                        const p = prices[a.id];
+                        const priceStr = p?.try ? ` · ${formatCurrency(p.try)}` : '';
+                        return (
+                          <option key={a.id} value={a.id} style={{ background: COLORS.bgPanel }}>
+                            {a.symbol} — {a.name}{priceStr}
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
 
