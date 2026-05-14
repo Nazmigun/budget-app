@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Wallet, TrendingUp, Calendar, Plus, X, Check, ArrowRight, Coffee, ShoppingBag, Car, Home, Heart, Sparkles, MoreHorizontal, ChevronRight, ChevronLeft, Tag, CalendarDays, TrendingDown, LogOut, Cloud, CloudOff, Loader, Activity, HelpCircle } from 'lucide-react';
+import { Wallet, TrendingUp, Calendar, Plus, X, Check, ArrowRight, Coffee, ShoppingBag, Car, Home, Heart, Sparkles, MoreHorizontal, ChevronRight, ChevronLeft, Tag, CalendarDays, TrendingDown, LogOut, Cloud, CloudOff, Loader, Activity, HelpCircle, CreditCard } from 'lucide-react';
 import { supabase } from './supabase';
 import Auth from './Auth';
 import InvestmentPage from './Investment';
@@ -53,6 +53,13 @@ export default function App() {
   const [portfolioSnapshots, setPortfolioSnapshots] = useState([]); // [{ date, value, cost }]
   const [marketAssetConfig, setMarketAssetConfig] = useState([]); // [{ id, visible }] sıralı
   
+  // Taksit sistemi
+  const [installments, setInstallments] = useState([]); // [{ id, name, totalAmount, months, monthlyAmount, startDate, paidMonths }]
+  const [showInstallmentModal, setShowInstallmentModal] = useState(false);
+  const [installmentName, setInstallmentName] = useState('');
+  const [installmentAmount, setInstallmentAmount] = useState('');
+  const [installmentMonths, setInstallmentMonths] = useState('');
+  
   // Expense form
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseCategory, setExpenseCategory] = useState('');
@@ -99,6 +106,7 @@ export default function App() {
         setWatchedAssets([]);
         setPortfolioSnapshots([]);
         setMarketAssetConfig([]);
+        setInstallments([]);
         setStep('setup');
         setHasLoaded(false);
       }
@@ -163,6 +171,7 @@ export default function App() {
           if (dataToLoad.watchedAssets) setWatchedAssets(dataToLoad.watchedAssets);
           if (dataToLoad.portfolioSnapshots) setPortfolioSnapshots(dataToLoad.portfolioSnapshots);
           if (dataToLoad.marketAssetConfig) setMarketAssetConfig(dataToLoad.marketAssetConfig);
+          if (dataToLoad.installments) setInstallments(dataToLoad.installments);
           
           // OTOMATİK GÜN GEÇİŞİ: todayExpensesDate dünden veya daha eskiyse, o günü kapat
           if (dataToLoad.todayExpenses && dataToLoad.todayExpensesDate) {
@@ -251,6 +260,7 @@ export default function App() {
       todayExpenses,
       todayExpensesDate: todayKey,
       tutorialCompleted,
+      installments,
       setupComplete: step === 'dashboard',
       investmentGoals,
       transactions,
@@ -294,7 +304,7 @@ export default function App() {
     return () => {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
-  }, [salary, salaryDay, investmentEnabled, investmentPercent, investmentAmount, investmentMode, dayHistory, carryOver, todayExpenses, step, hasLoaded, todayKey, session, tutorialCompleted, investmentGoals, transactions, watchedAssets, portfolioSnapshots, marketAssetConfig]);
+  }, [salary, salaryDay, investmentEnabled, investmentPercent, investmentAmount, investmentMode, dayHistory, carryOver, todayExpenses, step, hasLoaded, todayKey, session, tutorialCompleted, investmentGoals, transactions, watchedAssets, portfolioSnapshots, marketAssetConfig, installments]);
 
   // Çıkış yap
   
@@ -347,6 +357,19 @@ const handleLogout = async () => {
     { id: 'diger', label: 'Diğer', icon: MoreHorizontal, color: '#6B6B6B' },
   ];
 
+  // Aktif taksitlerin aylık toplam tutarını hesapla
+  const activeInstallmentTotal = useMemo(() => {
+    const today = new Date();
+    return installments.reduce((sum, inst) => {
+      const start = new Date(inst.startDate);
+      const monthsPassed = (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth());
+      if (monthsPassed >= 0 && monthsPassed < inst.months) {
+        return sum + inst.monthlyAmount;
+      }
+      return sum;
+    }, 0);
+  }, [installments]);
+
   // Hesaplamalar
   const calculations = useMemo(() => {
     const salaryNum = parseFloat(salary) || 0;
@@ -358,7 +381,7 @@ const handleLogout = async () => {
         invAmount = parseFloat(investmentAmount) || 0;
       }
     }
-    const remaining = salaryNum - invAmount;
+    const remaining = salaryNum - invAmount - activeInstallmentTotal;
     
     // Bugünün gerçek tarihi
     const today = new Date();
@@ -446,7 +469,7 @@ const handleLogout = async () => {
       periodHistorySpent,
       moneyLeftBeforeToday
     };
-  }, [salary, investmentEnabled, investmentPercent, investmentAmount, investmentMode, salaryDay, dayHistory]);
+  }, [salary, investmentEnabled, investmentPercent, investmentAmount, investmentMode, salaryDay, dayHistory, activeInstallmentTotal]);
 
   // Tarih formatlama
   const formatDate = (date) => {
@@ -563,6 +586,7 @@ const handleLogout = async () => {
         setWatchedAssets([]);
         setPortfolioSnapshots([]);
         setMarketAssetConfig([]);
+        setInstallments([]);
         setStep('setup');
         setShowCalendar(false);
         setSelectedDate(null);
@@ -1004,9 +1028,9 @@ const handleLogout = async () => {
             <h3 className="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">
               BUGÜNKÜ HARCAMALAR — {todayExpenses.length}
             </h3>
-            <button 
+            <button
               onClick={() => setShowExpenseModal(true)}
-              className={`font-label-caps text-label-caps text-primary-container hover:opacity-80 transition-opacity flex items-center gap-1 ${showTutorial && tutorialStep === 2 ? 'tutorial-target-interactive' : ''}`}
+              className={`font-label-caps text-label-caps bg-primary-container text-on-primary-fixed hover:brightness-105 transition-all flex items-center gap-1 px-3 py-1.5 rounded-lg shadow-sm ${showTutorial && tutorialStep === 2 ? 'tutorial-target-interactive' : ''}`}
             >
               <span className="material-symbols-outlined text-[16px]">add</span> Ekle
             </button>
@@ -1161,14 +1185,14 @@ const handleLogout = async () => {
               <span className="material-symbols-outlined">close</span>
             </button>
 
-            <div 
-              className="scale-in w-full max-w-5xl flex flex-col lg:flex-row gap-6 relative"
-              style={{ maxHeight: '95vh' }}
+            <div
+              className="scale-in w-full max-w-5xl flex flex-col lg:flex-row gap-6 relative overflow-y-auto lg:overflow-visible"
+              style={{ maxHeight: '90vh' }}
               onClick={(e) => e.stopPropagation()}
             >
-              
+
               {/* LEFT COLUMN: Calendar */}
-              <div className="flex-[1.5] flex flex-col gap-4 overflow-hidden">
+              <div className="flex-[1.5] flex flex-col gap-4">
                 {/* Header: Dark nav */}
                 <div className="bg-[#2A322A] text-white rounded-2xl flex items-center justify-between px-6 py-5 shadow-sm">
                   <button onClick={goPrevMonth} className="hover:text-primary-fixed transition-colors flex items-center">
@@ -1183,7 +1207,7 @@ const handleLogout = async () => {
                 </div>
 
                 {/* Calendar Grid Container */}
-                <div className="bg-surface-container-lowest rounded-2xl p-6 shadow-sm border border-surface-variant flex-1 flex flex-col overflow-y-auto">
+                <div className="bg-surface-container-lowest rounded-2xl p-4 md:p-6 shadow-sm border border-surface-variant flex flex-col overflow-y-auto min-h-[320px] lg:flex-1">
                   {/* Days Header */}
                   <div className="grid grid-cols-7 gap-2 mb-3">
                     {dayNamesShort.map(d => (
@@ -1254,8 +1278,8 @@ const handleLogout = async () => {
               </div>
 
               {/* RIGHT COLUMN: Summary or Day Detail */}
-              <div className="flex-1 flex flex-col gap-4 h-full">
-                <div className="bg-surface-container-lowest rounded-2xl p-8 shadow-sm border border-surface-variant h-full flex flex-col overflow-y-auto">
+              <div className="flex-1 flex flex-col gap-4 lg:h-full">
+                <div className="bg-surface-container-lowest rounded-2xl p-6 md:p-8 shadow-sm border border-surface-variant lg:h-full flex flex-col overflow-y-auto">
                   {!selectedDate ? (
                      <>
                         <h3 className="text-2xl font-display-tr font-bold text-on-surface mb-8">Bu Ay Özet</h3>
@@ -1284,25 +1308,109 @@ const handleLogout = async () => {
                         
                         <div className="flex justify-between items-end mb-3">
                            <span className="text-on-surface-variant font-medium">Net Bakiye</span>
-                           <span className="font-bold text-3xl font-numeric-lg text-on-surface">₺{(totalSaved - totalOver).toLocaleString()}</span>
+                           <span className="font-bold text-3xl font-numeric-lg text-on-surface">₺{(totalSaved - totalOver - activeInstallmentTotal).toLocaleString()}</span>
                         </div>
                         
                         {/* Progress Bar */}
-                        <div className="h-4 w-full rounded-full bg-surface-variant flex overflow-hidden">
+                        <div className="h-4 w-full rounded-full bg-surface-variant flex overflow-hidden mb-8">
                            {(() => {
-                              const total = totalSaved + totalOver;
+                              const total = totalSaved + totalOver + activeInstallmentTotal;
                               if (total === 0) return null;
                               const greenPct = (totalSaved / total) * 100;
                               const redPct = (totalOver / total) * 100;
+                              const instPct = (activeInstallmentTotal / total) * 100;
                               return (
                                 <>
                                   <div style={{ width: `${greenPct}%` }} className="bg-primary h-full"></div>
                                   <div style={{ width: `${redPct}%` }} className="bg-error h-full"></div>
+                                  <div style={{ width: `${instPct}%` }} className="bg-tertiary h-full"></div>
                                 </>
                               )
                            })()}
-                        </div>
-                     </>
+                         </div>
+
+                         {/* Taksit Bölümü */}
+                         <hr className="border-surface-variant mb-6"/>
+                         <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-2">
+                               <CreditCard size={18} className="text-primary" />
+                               <h4 className="font-bold text-on-surface text-sm tracking-wider uppercase">Taksitler</h4>
+                            </div>
+                            <button 
+                               onClick={() => setShowInstallmentModal(true)}
+                               className="flex items-center gap-1 text-primary hover:opacity-80 transition-opacity text-xs font-bold tracking-wider uppercase"
+                            >
+                               <span className="material-symbols-outlined text-[16px]">add</span> Ekle
+                            </button>
+                         </div>
+
+                         {installments.length === 0 ? (
+                            <div className="text-center py-6 text-on-surface-variant text-sm border border-dashed border-surface-variant rounded-xl">
+                               Henüz taksit eklenmedi
+                            </div>
+                         ) : (
+                            <div className="space-y-3 max-h-[240px] overflow-y-auto pr-1">
+                               {installments.map(inst => {
+                                  const today = new Date();
+                                  const start = new Date(inst.startDate);
+                                  const monthsPassed = (today.getFullYear() - start.getFullYear()) * 12 + (today.getMonth() - start.getMonth());
+                                  const paidCount = Math.min(Math.max(monthsPassed + 1, 0), inst.months);
+                                  const isActive = monthsPassed >= 0 && monthsPassed < inst.months;
+                                  const progressPct = (paidCount / inst.months) * 100;
+                                  const remainingAmount = inst.totalAmount - (paidCount * inst.monthlyAmount);
+                                  
+                                  return (
+                                     <div key={inst.id} className={`rounded-xl p-4 border transition-all ${isActive ? 'bg-surface-container border-primary/20' : 'bg-surface-container-low border-surface-variant opacity-60'}`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                           <div className="flex items-center gap-2">
+                                              <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-primary' : 'bg-surface-variant'}`}></div>
+                                              <span className="font-medium text-on-surface text-sm">{inst.name}</span>
+                                           </div>
+                                           <button
+                                              onClick={() => {
+                                                 setConfirmDialog({
+                                                    title: 'Taksiti sil',
+                                                    message: `"${inst.name}" taksiti kalıcı olarak silinecek. Devam edilsin mi?`,
+                                                    onConfirm: () => {
+                                                       setInstallments(installments.filter(i => i.id !== inst.id));
+                                                       setConfirmDialog(null);
+                                                    }
+                                                 });
+                                              }}
+                                              className="w-6 h-6 rounded-full flex items-center justify-center text-error/60 hover:text-error hover:bg-error/10 transition-colors"
+                                           >
+                                              <span className="material-symbols-outlined text-[14px]">close</span>
+                                           </button>
+                                        </div>
+                                        <div className="flex justify-between text-xs text-on-surface-variant mb-2">
+                                           <span>₺{inst.monthlyAmount.toLocaleString()}/ay</span>
+                                           <span>{paidCount}/{inst.months} ay</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-surface-variant rounded-full overflow-hidden">
+                                           <div 
+                                              className={`h-full rounded-full transition-all duration-500 ${isActive ? 'bg-primary' : 'bg-on-surface-variant'}`}
+                                              style={{ width: `${progressPct}%` }}
+                                           ></div>
+                                        </div>
+                                        <div className="flex justify-between mt-2 text-xs">
+                                           <span className="text-on-surface-variant">Toplam: ₺{inst.totalAmount.toLocaleString()}</span>
+                                           <span className={`font-medium ${isActive ? 'text-primary' : 'text-on-surface-variant'}`}>
+                                              {isActive ? `Kalan: ₺${Math.max(remainingAmount, 0).toLocaleString()}` : 'Tamamlandı'}
+                                           </span>
+                                        </div>
+                                     </div>
+                                  );
+                               })}
+                            </div>
+                         )}
+
+                         {activeInstallmentTotal > 0 && (
+                            <div className="mt-4 bg-secondary-container/50 rounded-xl p-4 flex items-center justify-between border border-secondary-fixed/30">
+                               <span className="text-sm text-on-surface-variant">Aylık Taksit Toplamı</span>
+                               <span className="font-bold text-on-surface">₺{activeInstallmentTotal.toLocaleString()}</span>
+                            </div>
+                         )}
+                      </>
                   ) : (
                      /* Day Details */
                      selectedEntry ? (
@@ -1929,6 +2037,163 @@ const handleLogout = async () => {
         </div>
       )}
 
+      {/* Installment Add Modal */}
+      {showInstallmentModal && (
+        <div 
+          className="fade-in fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6"
+          style={{ background: 'rgba(44,36,22,0.7)' }}
+          onClick={() => setShowInstallmentModal(false)}
+        >
+          <div 
+            className="scale-in w-full max-w-lg p-7 md:p-9 rounded-3xl shadow-xl"
+            style={{ background: '#F8FAFC', maxHeight: '90vh', overflowY: 'auto' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-7">
+              <div>
+                <div className="font-sans text-xs mb-1" style={{ letterSpacing: '0.2em', textTransform: 'uppercase', color: '#64748B' }}>
+                  Yeni Taksit
+                </div>
+                <h3 className="text-2xl" style={{ fontWeight: 400 }}>
+                  <em>Taksit</em> ekle
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowInstallmentModal(false)}
+                className="w-9 h-9 flex items-center justify-center"
+                style={{ border: '1px solid #0F172A' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* İsim */}
+            <div className="mb-6">
+              <label className="font-sans text-xs block mb-2" style={{ letterSpacing: '0.15em', textTransform: 'uppercase', color: '#64748B', fontWeight: 500 }}>
+                Taksit Adı
+              </label>
+              <input
+                type="text"
+                value={installmentName}
+                onChange={(e) => setInstallmentName(e.target.value)}
+                placeholder="örn. Telefon, Laptop, Araba"
+                autoFocus
+                className="font-sans w-full bg-transparent border-0 border-b-2 outline-none py-2"
+                style={{
+                  borderColor: '#0F172A',
+                  fontSize: '18px',
+                  color: '#0F172A'
+                }}
+              />
+            </div>
+
+            {/* Toplam Tutar */}
+            <div className="mb-6">
+              <label className="font-sans text-xs block mb-2" style={{ letterSpacing: '0.15em', textTransform: 'uppercase', color: '#64748B', fontWeight: 500 }}>
+                Toplam Tutar
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={installmentAmount}
+                  onChange={(e) => setInstallmentAmount(e.target.value)}
+                  placeholder="0"
+                  className="number-input w-full bg-transparent border-0 border-b-2 outline-none font-mono-num"
+                  style={{
+                    borderColor: '#0F172A',
+                    fontSize: '40px',
+                    fontWeight: 300,
+                    paddingBottom: '8px',
+                    paddingRight: '50px'
+                  }}
+                />
+                <span className="font-mono-num absolute right-0 bottom-2 text-2xl" style={{ color: '#64748B' }}>₺</span>
+              </div>
+            </div>
+
+            {/* Vade */}
+            <div className="mb-6">
+              <label className="font-sans text-xs block mb-2" style={{ letterSpacing: '0.15em', textTransform: 'uppercase', color: '#64748B', fontWeight: 500 }}>
+                Vade (Ay)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="120"
+                value={installmentMonths}
+                onChange={(e) => setInstallmentMonths(e.target.value)}
+                placeholder="örn. 12"
+                className="number-input w-full bg-transparent border-0 border-b-2 outline-none font-mono-num"
+                style={{
+                  borderColor: '#0F172A',
+                  fontSize: '28px',
+                  fontWeight: 300,
+                  paddingBottom: '8px'
+                }}
+              />
+            </div>
+
+            {/* Önizleme */}
+            {installmentAmount && installmentMonths && parseFloat(installmentAmount) > 0 && parseInt(installmentMonths) > 0 && (
+              <div className="mb-7 p-5 rounded-xl border border-surface-variant bg-surface-container">
+                <div className="text-xs tracking-widest text-on-surface-variant uppercase mb-3 font-bold">Önizleme</div>
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-sm text-on-surface-variant">Toplam Tutar</span>
+                  <span className="font-mono-num font-medium">₺{parseFloat(installmentAmount).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-sm text-on-surface-variant">Vade</span>
+                  <span className="font-mono-num font-medium">{parseInt(installmentMonths)} ay</span>
+                </div>
+                <hr className="border-surface-variant my-3" />
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm font-medium text-on-surface">Aylık Taksit</span>
+                  <span className="font-mono-num font-bold text-lg text-primary">
+                    ₺{Math.ceil(parseFloat(installmentAmount) / parseInt(installmentMonths)).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                const amount = parseFloat(installmentAmount);
+                const months = parseInt(installmentMonths);
+                if (installmentName && amount > 0 && months > 0) {
+                  const newInstallment = {
+                    id: Date.now().toString(),
+                    name: installmentName,
+                    totalAmount: amount,
+                    months: months,
+                    monthlyAmount: Math.ceil(amount / months),
+                    startDate: new Date().toISOString().split('T')[0],
+                    paidMonths: 0
+                  };
+                  setInstallments([...installments, newInstallment]);
+                  setInstallmentName('');
+                  setInstallmentAmount('');
+                  setInstallmentMonths('');
+                  setShowInstallmentModal(false);
+                }
+              }}
+              disabled={!installmentName || !installmentAmount || !installmentMonths || parseFloat(installmentAmount) <= 0 || parseInt(installmentMonths) <= 0}
+              className="w-full font-sans py-4 transition-all rounded-xl shadow-sm"
+              style={{
+                background: (!installmentName || !installmentAmount || !installmentMonths) ? '#E2E8F0' : '#0F172A',
+                color: (!installmentName || !installmentAmount || !installmentMonths) ? '#64748B' : '#F8FAFC',
+                cursor: (!installmentName || !installmentAmount || !installmentMonths) ? 'not-allowed' : 'pointer',
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase',
+                fontSize: '12px',
+                fontWeight: 500
+              }}
+            >
+              Taksit Ekle
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Confirm Dialog — özel onay penceresi (window.confirm yerine) */}
       {confirmDialog && (
         <div 
@@ -1986,13 +2251,13 @@ const handleLogout = async () => {
       )}
     
       {showTutorial && (
-        <div className="fixed inset-0 z-40" style={{ backdropFilter: 'blur(8px)', background: 'rgba(248, 250, 252, 0.7)' }}>
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-6" style={{ zIndex: 60 }}>
-            <div className="bg-white p-6 rounded-2xl shadow-2xl max-w-sm animate-fade-up border border-[#E2E8F0]" style={{
-              position: 'absolute',
-              top: tutorialStep === 1 ? '50%' : tutorialStep === 2 ? '40%' : '20%',
-              transform: 'translateY(-50%)'
-            }}>
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-6" style={{ backdropFilter: 'blur(8px)', background: 'rgba(248, 250, 252, 0.75)' }}>
+          <div className="bg-white w-full max-w-sm p-6 rounded-2xl shadow-2xl animate-fade-up border border-[#E2E8F0]">
+            <div className="w-10 h-10 rounded-full bg-[#DCFCE7] flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-[#22C55E] text-[20px]">
+                {tutorialStep === 1 ? 'payments' : tutorialStep === 2 ? 'add_circle' : tutorialStep === 3 ? 'calendar_month' : 'trending_up'}
+              </span>
+            </div>
               <div className="text-[#22C55E] font-display font-semibold mb-2 text-lg">
                 {tutorialStep === 1 && "Günlük Bütçen"}
                 {tutorialStep === 2 && "Harcama Ekle"}
@@ -2017,12 +2282,11 @@ const handleLogout = async () => {
                     Yatırıma Geç
                   </button>
                 ) : (
-                  <button onClick={nextTutorialStep} className="bg-surface-dim text-on-surface px-4 py-2 rounded-xl text-xs font-bold hover:bg-surface-variant transition-colors">
+                  <button onClick={nextTutorialStep} className="bg-[#22C55E] text-white px-4 py-2 rounded-xl text-xs font-bold hover:brightness-105 transition-all shadow-sm">
                     İleri
                   </button>
                 )}
               </div>
-            </div>
           </div>
         </div>
       )}
