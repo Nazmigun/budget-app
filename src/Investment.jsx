@@ -190,6 +190,18 @@ export default function InvestmentPage({
   const [marketFilter, setMarketFilter] = useState('all');
   const [stocksError, setStocksError] = useState(null);
 
+  const [marketAnalysisData, setMarketAnalysisData] = useState(null);
+  const [marketAnalysisLoading, setMarketAnalysisLoading] = useState(false);
+  const [marketAnalysisError, setMarketAnalysisError] = useState(null);
+
+  // Add asset modal - tip seçici
+  const [addAssetType, setAddAssetType] = useState('crypto');
+  const [stockSymbol, setStockSymbol] = useState('');
+  const [stockMarket, setStockMarket] = useState('bist');
+  const [stockName, setStockName] = useState('');
+  const [fundCode, setFundCode] = useState('');
+  const [fundName, setFundName] = useState('');
+
   const [invSpotlightRect, setInvSpotlightRect] = useState(null);
 
   useEffect(() => {
@@ -424,6 +436,92 @@ export default function InvestmentPage({
     }
   };
 
+  const fetchMarketAnalysisData = async () => {
+    setMarketAnalysisLoading(true);
+    setMarketAnalysisError(null);
+    const results = {};
+    try {
+      // CoinGecko Global: BTC dominance + stablecoin %
+      try {
+        const res = await fetch('https://api.coingecko.com/api/v3/global');
+        if (res.ok) {
+          const data = await res.json();
+          const g = data.data;
+          results.btcDominance = g.market_cap_percentage?.btc || 0;
+          results.ethDominance = g.market_cap_percentage?.eth || 0;
+          results.totalMarketCapUsd = g.total_market_cap?.usd || 0;
+          results.totalMarketCapChange24h = g.market_cap_change_percentage_24h_usd || 0;
+          const stablecoins = ['usdt', 'usdc', 'busd', 'dai', 'tusd', 'fdusd'];
+          results.stablecoinDominance = stablecoins.reduce((sum, k) => sum + (g.market_cap_percentage?.[k] || 0), 0);
+        }
+      } catch (e) { console.warn('CG global:', e); }
+
+      // Binance Futures: Funding Rate
+      try {
+        const res = await fetch('https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT');
+        if (res.ok) {
+          const d = await res.json();
+          results.fundingRate = parseFloat(d.lastFundingRate) * 100;
+          results.nextFundingTime = d.nextFundingTime;
+        }
+      } catch (e) { console.warn('Funding rate:', e); }
+
+      // Binance Futures: Open Interest (BTC)
+      try {
+        const res = await fetch('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT');
+        if (res.ok) {
+          const d = await res.json();
+          results.openInterestBtc = parseFloat(d.openInterest);
+        }
+      } catch (e) { console.warn('Open interest:', e); }
+
+      // Binance Futures: Long/Short Ratio
+      try {
+        const res = await fetch('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=5m&limit=1');
+        if (res.ok) {
+          const d = await res.json();
+          if (d.length > 0) {
+            results.longRatio = parseFloat(d[0].longAccount) * 100;
+            results.shortRatio = parseFloat(d[0].shortAccount) * 100;
+          }
+        }
+      } catch (e) { console.warn('LS ratio:', e); }
+
+      // Binance Futures: Open Interest değişim (history)
+      try {
+        const res = await fetch('https://fapi.binance.com/futures/data/openInterestHist?symbol=BTCUSDT&period=1h&limit=25');
+        if (res.ok) {
+          const d = await res.json();
+          if (d.length >= 2) {
+            const latest = parseFloat(d[d.length - 1].sumOpenInterest);
+            const prev = parseFloat(d[0].sumOpenInterest);
+            results.openInterestChange24h = prev > 0 ? ((latest - prev) / prev) * 100 : 0;
+            results.openInterestUsd = parseFloat(d[d.length - 1].sumOpenInterestValue);
+          }
+        }
+      } catch (e) { console.warn('OI hist:', e); }
+
+      // Binance Spot: Exchange inflow proxy (taker buy/sell ratio on BTC)
+      try {
+        const res = await fetch('https://fapi.binance.com/futures/data/takerlongshortRatio?symbol=BTCUSDT&period=1h&limit=24');
+        if (res.ok) {
+          const d = await res.json();
+          if (d.length > 0) {
+            const avg = d.reduce((s, x) => s + parseFloat(x.buySellRatio), 0) / d.length;
+            results.takerBuySellRatio = avg;
+          }
+        }
+      } catch (e) { console.warn('Taker ratio:', e); }
+
+      setMarketAnalysisData(results);
+    } catch (e) {
+      console.error('Market analysis hatası:', e);
+      setMarketAnalysisError('Veriler alınamadı');
+    } finally {
+      setMarketAnalysisLoading(false);
+    }
+  };
+
   const fetchStocksAndFunds = async (usdTryOverride) => {
     setStocksError(null);
     // --- USD/TRY kuru ---
@@ -510,7 +608,8 @@ export default function InvestmentPage({
     fetchPrices();
     fetchStocksAndFunds();
     fetchFearGreed();
-    const interval = setInterval(() => { fetchPrices(); fetchStocksAndFunds(); fetchFearGreed(); }, 5 * 60 * 1000);
+    fetchMarketAnalysisData();
+    const interval = setInterval(() => { fetchPrices(); fetchStocksAndFunds(); fetchFearGreed(); fetchMarketAnalysisData(); }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [allAssets.length]);
 
@@ -763,6 +862,43 @@ export default function InvestmentPage({
     setSearchQuery(''); setSearchResults([]);
   };
 
+  const addStockToWatchlist = () => {
+    if (!stockSymbol.trim()) return;
+    const sym = stockSymbol.trim().toUpperCase();
+    const yahooSymbol = stockMarket === 'bist' ? `${sym}.IS` : sym;
+    const id = `custom_${yahooSymbol.toLowerCase().replace(/\./g, '_')}`;
+    const newAsset = {
+      id, symbol: sym,
+      name: stockName.trim() || sym,
+      type: stockMarket === 'bist' ? 'bist' : 'nasdaq',
+      source: 'yahoo',
+      yahooSymbol,
+    };
+    if (!watchedAssets.some(a => a.id === newAsset.id) && !DEFAULT_ASSETS.some(a => a.yahooSymbol === yahooSymbol)) {
+      onUpdateWatchedAssets([...watchedAssets, newAsset]);
+    }
+    setShowAddAssetModal(false);
+    setStockSymbol(''); setStockName('');
+  };
+
+  const addFundToWatchlist = () => {
+    if (!fundCode.trim()) return;
+    const code = fundCode.trim().toUpperCase();
+    const id = `fund_${code.toLowerCase()}`;
+    const newAsset = {
+      id, symbol: code,
+      name: fundName.trim() || code,
+      type: 'turkishfund',
+      source: 'tefas',
+      tefasCode: code,
+    };
+    if (!watchedAssets.some(a => a.id === newAsset.id) && !DEFAULT_ASSETS.some(a => a.tefasCode === code)) {
+      onUpdateWatchedAssets([...watchedAssets, newAsset]);
+    }
+    setShowAddAssetModal(false);
+    setFundCode(''); setFundName('');
+  };
+
   const handleSaveGoal = () => {
     if (!goalName || !goalAmount) return;
     const newGoal = {
@@ -849,18 +985,19 @@ export default function InvestmentPage({
           </h1>
         </div>
 
-        <div className="fade-up delay-2 grid grid-cols-4 gap-1 mb-6 p-1" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+        <div className="fade-up delay-2 flex gap-1 mb-6 p-1 overflow-x-auto" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           {[
             { id: 'portfolio', label: 'Mali Durum', icon: Wallet },
+            { id: 'analysis', label: 'Piyasa Analizi', icon: Activity },
             { id: 'market', label: 'Piyasa', icon: BarChart3 },
             { id: 'goals', label: 'Hedefler', icon: Target },
             { id: 'tips', label: 'Tavsiyeler', icon: Activity }
           ].map(tab => {
             const Icon = tab.icon; const isActive = activeTab === tab.id;
             return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="ui-font flex items-center justify-center gap-1.5 py-2.5 transition-all"
-                style={{ background: isActive ? COLORS.accent : 'transparent', color: isActive ? COLORS.bg : COLORS.textBright, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '10px', fontWeight: 600 }}>
-                <Icon size={11} /><span className="hidden sm:inline">{tab.label}</span>
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="ui-font flex-shrink-0 flex items-center justify-center gap-1.5 py-2.5 px-3 transition-all"
+                style={{ background: isActive ? COLORS.accent : 'transparent', color: isActive ? COLORS.bg : COLORS.textBright, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '10px', fontWeight: 600, minWidth: 'fit-content' }}>
+                <Icon size={11} /><span>{tab.label}</span>
               </button>
             );
           })}
@@ -1075,6 +1212,284 @@ export default function InvestmentPage({
           </div>
         )}
 
+        {/* MARKET ANALYSIS TAB */}
+        {activeTab === 'analysis' && (
+          <div>
+            <div className="fade-up delay-3 mb-2">
+              <div className="ui-font text-xs mb-1" style={{ color: COLORS.textDim, letterSpacing: '0.25em', textTransform: 'uppercase' }}>▌ Piyasa Analizi</div>
+              <p className="ui-font text-xs" style={{ color: COLORS.textDimmer, lineHeight: 1.5 }}>Kripto piyasasının genel durumunu ve duygu göstergelerini takip et.</p>
+            </div>
+
+            {/* FEAR & GREED */}
+            <div className="fade-up delay-3 mb-5" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${fgStats ? getFGColor(fgStats.current) : COLORS.accent}` }}>
+              <div className="p-4 pb-0 flex items-center justify-between">
+                <div className="ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.25em', textTransform: 'uppercase' }}>▌ Korku &amp; Açgözlülük Endeksi</div>
+                <div className="flex items-center gap-3">
+                  {fearGreedLoading && <div className="w-1.5 h-1.5 rounded-full spin" style={{ border: `1.5px solid ${COLORS.accent}`, borderTopColor: 'transparent' }} />}
+                  <button onClick={fetchFearGreed} className="ui-font text-xs" style={{ color: COLORS.textDimmer, letterSpacing: '0.1em' }}>↻ Yenile</button>
+                </div>
+              </div>
+              {fearGreedError && !fgStats ? (
+                <div className="p-4 ui-font text-xs flex items-center gap-2" style={{ color: COLORS.textDim }}>
+                  <AlertCircle size={12} />{fearGreedError} — <button onClick={fetchFearGreed} className="underline" style={{ color: COLORS.textBright }}>tekrar dene</button>
+                </div>
+              ) : !fgStats ? (
+                <div className="p-4 flex items-center justify-center gap-2 ui-font text-xs" style={{ color: COLORS.textDim }}>
+                  <div className="w-3 h-3 rounded-full spin" style={{ border: `1.5px solid ${COLORS.textDim}`, borderTopColor: COLORS.accent }} />yükleniyor...
+                </div>
+              ) : (
+                <>
+                  <div className="p-4 flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex-shrink-0 w-full sm:w-auto" style={{ maxWidth: 200 }}>
+                      <FearGreedGauge value={fgStats.current} />
+                    </div>
+                    <div className="flex-1 w-full grid grid-cols-2 gap-2">
+                      {[
+                        { label: 'ANLIK', sublabel: 'bugün', val: fgStats.current },
+                        { label: 'KISA VADE', sublabel: '7 günlük ort.', val: fgStats.avg7 },
+                        { label: 'ORTA VADE', sublabel: '30 günlük ort.', val: fgStats.avg30 },
+                        { label: 'UZUN VADE', sublabel: '90 günlük ort.', val: fgStats.avg90 },
+                      ].map(({ label, sublabel, val }) => {
+                        const c = getFGColor(val); const lbl = getFGLabel(val);
+                        return (
+                          <div key={label} className="p-3 flex flex-col gap-1.5" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.border}`, borderTop: `2px solid ${c}` }}>
+                            <div className="ui-font text-[9px] font-semibold" style={{ color: COLORS.textDim, letterSpacing: '0.2em' }}>{label}</div>
+                            <div className="num-font text-2xl font-bold leading-none" style={{ color: c }}>{val}</div>
+                            <div className="ui-font text-[10px]" style={{ color: c, opacity: 0.85 }}>{lbl}</div>
+                            <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: COLORS.border }}>
+                              <div className="h-full rounded-full" style={{ width: `${val}%`, background: `linear-gradient(90deg, #FF4444 0%, #FFD700 50%, #22C55E 100%)`, backgroundSize: '300% 100%', backgroundPosition: `${100 - val}% 0` }} />
+                            </div>
+                            <div className="ui-font text-[9px]" style={{ color: COLORS.textDimmer }}>{sublabel}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="px-4 pb-4">
+                    <div className="ui-font text-[9px] mb-2 flex justify-between" style={{ color: COLORS.textDimmer, letterSpacing: '0.15em' }}>
+                      <span>SON 90 GÜN</span><span>alternative.me</span>
+                    </div>
+                    <FGMiniChart data={fgStats.history} />
+                    <div className="mt-3 flex items-center gap-0.5">
+                      {[
+                        { label: 'Aş.Korku', color: '#FF4444', range: '0–24' },
+                        { label: 'Korku', color: '#FF8844', range: '25–44' },
+                        { label: 'Nötr', color: '#FFD700', range: '45–55' },
+                        { label: 'Açgöz.', color: '#7AE07A', range: '56–74' },
+                        { label: 'Aş.Açgöz.', color: '#22C55E', range: '75–100' },
+                      ].map(z => (
+                        <div key={z.label} className="flex-1 text-center py-1" style={{ background: `${z.color}18`, borderTop: `2px solid ${z.color}` }}>
+                          <div className="ui-font" style={{ fontSize: '8px', color: z.color, letterSpacing: '0.05em', lineHeight: 1.3 }}>{z.label}</div>
+                          <div className="num-font" style={{ fontSize: '8px', color: COLORS.textDimmer }}>{z.range}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* BTC DOMINANCE + MARKET CAPS */}
+            <div className="fade-up delay-4 mb-5">
+              <div className="ui-font text-xs mb-3" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Piyasa Yapısı</div>
+              {marketAnalysisLoading && !marketAnalysisData ? (
+                <div className="flex items-center gap-2 p-4 ui-font text-xs" style={{ color: COLORS.textDim, background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+                  <div className="w-3 h-3 rounded-full spin" style={{ border: `1.5px solid ${COLORS.textDim}`, borderTopColor: COLORS.accent }} />yükleniyor...
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {/* BTC Dominance */}
+                  <div className="p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid #F7931A` }}>
+                    <div className="ui-font text-[9px] mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>BTC Dominance</div>
+                    <div className="num-font text-2xl font-bold mb-1" style={{ color: '#F7931A' }}>
+                      {marketAnalysisData?.btcDominance ? `%${marketAnalysisData.btcDominance.toFixed(1)}` : '—'}
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{ background: COLORS.border }}>
+                      <div className="h-full rounded-full" style={{ width: `${marketAnalysisData?.btcDominance || 0}%`, background: '#F7931A' }} />
+                    </div>
+                    <div className="ui-font text-[9px] mt-1" style={{ color: COLORS.textDimmer }}>Bitcoin piyasa payı</div>
+                  </div>
+
+                  {/* ETH Dominance */}
+                  <div className="p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid #627EEA` }}>
+                    <div className="ui-font text-[9px] mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>ETH Dominance</div>
+                    <div className="num-font text-2xl font-bold mb-1" style={{ color: '#627EEA' }}>
+                      {marketAnalysisData?.ethDominance ? `%${marketAnalysisData.ethDominance.toFixed(1)}` : '—'}
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden mt-2" style={{ background: COLORS.border }}>
+                      <div className="h-full rounded-full" style={{ width: `${marketAnalysisData?.ethDominance || 0}%`, background: '#627EEA' }} />
+                    </div>
+                    <div className="ui-font text-[9px] mt-1" style={{ color: COLORS.textDimmer }}>Ethereum piyasa payı</div>
+                  </div>
+
+                  {/* Stablecoin Dominance */}
+                  <div className="p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid #26A17B` }}>
+                    <div className="ui-font text-[9px] mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Stablecoin Dominance</div>
+                    <div className="num-font text-2xl font-bold mb-1" style={{ color: '#26A17B' }}>
+                      {marketAnalysisData?.stablecoinDominance ? `%${marketAnalysisData.stablecoinDominance.toFixed(1)}` : '—'}
+                    </div>
+                    <div className="ui-font text-[9px] mt-1" style={{ color: COLORS.textDimmer }}>
+                      {marketAnalysisData?.stablecoinDominance
+                        ? marketAnalysisData.stablecoinDominance > 10 ? '↑ Yüksek — beklemede sermaye var' : '↓ Düşük — sermaye piyasada'
+                        : 'USDT · USDC · DAI · BUSD'}
+                    </div>
+                  </div>
+
+                  {/* Total Market Cap */}
+                  <div className="p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${COLORS.accent}` }}>
+                    <div className="ui-font text-[9px] mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Toplam Piyasa Değeri</div>
+                    <div className="num-font text-lg font-bold mb-1" style={{ color: COLORS.textBrightest }}>
+                      {marketAnalysisData?.totalMarketCapUsd
+                        ? `$${(marketAnalysisData.totalMarketCapUsd / 1e12).toFixed(2)}T`
+                        : '—'}
+                    </div>
+                    {marketAnalysisData?.totalMarketCapChange24h !== undefined && (
+                      <div className="num-font text-xs" style={{ color: marketAnalysisData.totalMarketCapChange24h >= 0 ? COLORS.positive : COLORS.negative }}>
+                        {marketAnalysisData.totalMarketCapChange24h >= 0 ? '+' : ''}{marketAnalysisData.totalMarketCapChange24h.toFixed(2)}% (24s)
+                      </div>
+                    )}
+                    <div className="ui-font text-[9px] mt-1" style={{ color: COLORS.textDimmer }}>Tüm kripto varlıklar</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* FUTURES INDICATORS */}
+            <div className="fade-up delay-5 mb-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Türev Piyasa Göstergeleri</div>
+                <button onClick={fetchMarketAnalysisData} className="ui-font text-xs flex items-center gap-1" style={{ color: COLORS.textDimmer }}>
+                  <RefreshCw size={10} className={marketAnalysisLoading ? 'spin' : ''} />Yenile
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {/* Funding Rate */}
+                <div className="p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${marketAnalysisData?.fundingRate !== undefined ? (marketAnalysisData.fundingRate >= 0 ? COLORS.positive : COLORS.negative) : COLORS.textDim}` }}>
+                  <div className="ui-font text-[9px] mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Funding Rate</div>
+                  <div className="num-font text-2xl font-bold" style={{ color: marketAnalysisData?.fundingRate !== undefined ? (marketAnalysisData.fundingRate >= 0 ? COLORS.positive : COLORS.negative) : COLORS.textDim }}>
+                    {marketAnalysisData?.fundingRate !== undefined ? `${marketAnalysisData.fundingRate >= 0 ? '+' : ''}${marketAnalysisData.fundingRate.toFixed(4)}%` : '—'}
+                  </div>
+                  <div className="ui-font text-[9px] mt-2" style={{ color: COLORS.textDimmer }}>
+                    {marketAnalysisData?.fundingRate !== undefined
+                      ? marketAnalysisData.fundingRate > 0.05 ? "Pozitif — long'lar ödüyor (ısınan piyasa)"
+                        : marketAnalysisData.fundingRate < -0.01 ? "Negatif — short'lar ödüyor (panik modu)"
+                        : 'Nötr bölge'
+                      : 'BTC-USDT Perp · Binance'}
+                  </div>
+                  {marketAnalysisData?.nextFundingTime && (
+                    <div className="ui-font text-[9px] mt-1" style={{ color: COLORS.textDimmer }}>
+                      Sonraki: {new Date(marketAnalysisData.nextFundingTime).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Open Interest */}
+                <div className="p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid #8B5CF6` }}>
+                  <div className="ui-font text-[9px] mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Open Interest</div>
+                  <div className="num-font text-xl font-bold" style={{ color: '#8B5CF6' }}>
+                    {marketAnalysisData?.openInterestUsd
+                      ? `$${(marketAnalysisData.openInterestUsd / 1e9).toFixed(2)}B`
+                      : marketAnalysisData?.openInterestBtc
+                        ? `${(marketAnalysisData.openInterestBtc / 1000).toFixed(1)}K BTC`
+                        : '—'}
+                  </div>
+                  {marketAnalysisData?.openInterestChange24h !== undefined && (
+                    <div className="num-font text-xs mt-1" style={{ color: marketAnalysisData.openInterestChange24h >= 0 ? COLORS.positive : COLORS.negative }}>
+                      {marketAnalysisData.openInterestChange24h >= 0 ? '+' : ''}{marketAnalysisData.openInterestChange24h.toFixed(2)}% (24s)
+                    </div>
+                  )}
+                  <div className="ui-font text-[9px] mt-2" style={{ color: COLORS.textDimmer }}>
+                    {marketAnalysisData?.openInterestChange24h !== undefined
+                      ? marketAnalysisData.openInterestChange24h > 5 ? '↑ Artan OI — trend güçleniyor'
+                        : marketAnalysisData.openInterestChange24h < -5 ? '↓ Azalan OI — pozisyonlar kapatılıyor'
+                        : 'Stabil — yatay seyir'
+                      : 'BTC vadeli kontrat · Binance'}
+                  </div>
+                </div>
+
+                {/* Long/Short Ratio */}
+                <div className="p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid #EC4899` }}>
+                  <div className="ui-font text-[9px] mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Long / Short Oranı</div>
+                  {marketAnalysisData?.longRatio !== undefined ? (
+                    <>
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="num-font text-base font-bold" style={{ color: COLORS.positive }}>L %{marketAnalysisData.longRatio.toFixed(1)}</div>
+                        <div className="num-font text-base font-bold" style={{ color: COLORS.negative }}>S %{marketAnalysisData.shortRatio.toFixed(1)}</div>
+                      </div>
+                      <div className="h-2 rounded-full overflow-hidden" style={{ background: COLORS.negative }}>
+                        <div className="h-full rounded-full" style={{ width: `${marketAnalysisData.longRatio}%`, background: COLORS.positive }} />
+                      </div>
+                      <div className="ui-font text-[9px] mt-2" style={{ color: COLORS.textDimmer }}>
+                        {marketAnalysisData.longRatio > 60 ? 'Çoğunluk long — dikkat: sürü psikolojisi'
+                          : marketAnalysisData.longRatio < 40 ? 'Çoğunluk short — potansiyel sıkışma riski'
+                          : 'Dengeli dağılım'}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="num-font text-2xl font-bold" style={{ color: COLORS.textDim }}>—</div>
+                  )}
+                </div>
+
+                {/* Taker Buy/Sell (Exchange Inflow proxy) */}
+                <div className="p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid #F59E0B` }}>
+                  <div className="ui-font text-[9px] mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Alım/Satım Baskısı</div>
+                  {marketAnalysisData?.takerBuySellRatio !== undefined ? (
+                    <>
+                      <div className="num-font text-2xl font-bold mb-1" style={{ color: marketAnalysisData.takerBuySellRatio >= 1 ? COLORS.positive : COLORS.negative }}>
+                        {marketAnalysisData.takerBuySellRatio.toFixed(3)}
+                      </div>
+                      <div className="ui-font text-[9px]" style={{ color: COLORS.textDimmer }}>
+                        {marketAnalysisData.takerBuySellRatio >= 1.05 ? '↑ Alım baskısı ağır basıyor'
+                          : marketAnalysisData.takerBuySellRatio <= 0.95 ? '↓ Satım baskısı ağır basıyor'
+                          : '≈ Dengeli akış'}
+                      </div>
+                      <div className="ui-font text-[9px] mt-1" style={{ color: COLORS.textDimmer }}>Taker alım/satım oranı (24s ort.)</div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="num-font text-2xl font-bold" style={{ color: COLORS.textDim }}>—</div>
+                      <div className="ui-font text-[9px] mt-1" style={{ color: COLORS.textDimmer }}>Exchange inflow/outflow proxy</div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Liquidations — açıklama kartı */}
+            <div className="fade-up delay-6 mb-5 p-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid #EF4444` }}>
+              <div className="ui-font text-xs mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Tasfiyeler (Liquidations)</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="num-font text-[10px] mb-1" style={{ color: COLORS.textDimmer, letterSpacing: '0.1em' }}>LONG TASFİYELER</div>
+                  <div className="num-font text-base font-bold" style={{ color: COLORS.negative }}>
+                    {marketAnalysisData?.longRatio !== undefined && marketAnalysisData?.openInterestUsd
+                      ? `~$${((marketAnalysisData.openInterestUsd * 0.02 * (100 - marketAnalysisData.longRatio) / 100) / 1e6).toFixed(0)}M`
+                      : '—'}
+                  </div>
+                  <div className="ui-font text-[9px] mt-1" style={{ color: COLORS.textDimmer }}>Tahmini risk tasfiyesi</div>
+                </div>
+                <div>
+                  <div className="num-font text-[10px] mb-1" style={{ color: COLORS.textDimmer, letterSpacing: '0.1em' }}>SHORT TASFİYELER</div>
+                  <div className="num-font text-base font-bold" style={{ color: COLORS.positive }}>
+                    {marketAnalysisData?.longRatio !== undefined && marketAnalysisData?.openInterestUsd
+                      ? `~$${((marketAnalysisData.openInterestUsd * 0.02 * marketAnalysisData.longRatio / 100) / 1e6).toFixed(0)}M`
+                      : '—'}
+                  </div>
+                  <div className="ui-font text-[9px] mt-1" style={{ color: COLORS.textDimmer }}>Tahmini risk tasfiyesi</div>
+                </div>
+              </div>
+              <div className="ui-font text-[9px] mt-3 pt-3" style={{ color: COLORS.textDimmer, borderTop: `1px solid ${COLORS.border}` }}>
+                ⚠ Tasfiye verileri OI ve long/short oranından türetilmiştir. Gerçek zamanlı tasfiye için CoinGlass veya Coingecko Pro gereklidir.
+              </div>
+            </div>
+
+            <div className="fade-up delay-7 p-3 ui-font text-xs" style={{ color: COLORS.textDimmer, lineHeight: 1.7 }}>
+              <strong style={{ color: COLORS.textDim }}>Veri kaynakları:</strong> CoinGecko (piyasa yapısı) · Binance Futures (funding rate, OI, L/S oranı) · alternative.me (F&G)
+              <br />Analiz amaçlıdır, yatırım tavsiyesi değildir.
+            </div>
+          </div>
+        )}
+
         {/* MARKET TAB */}
         {activeTab === 'market' && (
           <div>
@@ -1126,89 +1541,19 @@ export default function InvestmentPage({
               </div>
             )}
 
-            {/* FEAR & GREED KARTI */}
-            {!marketEditMode && (marketFilter === 'all' || marketFilter === 'crypto') && (
-              <div className="mb-5" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${fgStats ? getFGColor(fgStats.current) : COLORS.accent}` }}>
-                <div className="p-4 pb-0 flex items-center justify-between">
-                  <div className="ui-font text-xs" style={{ color: COLORS.textDim, letterSpacing: '0.25em', textTransform: 'uppercase' }}>▌ Korku &amp; Açgözlülük Endeksi</div>
-                  <div className="flex items-center gap-3">
-                    {fearGreedLoading && <div className="w-1.5 h-1.5 rounded-full spin" style={{ border: `1.5px solid ${COLORS.accent}`, borderTopColor: 'transparent' }} />}
-                    <div className="ui-font text-xs flex items-center gap-1.5" style={{ color: COLORS.textDimmer, letterSpacing: '0.1em' }}>
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: COLORS.textDimmer }} />
-                      KRIPTO
-                    </div>
+            {/* Fear & Greed özet linki */}
+            {!marketEditMode && (marketFilter === 'all' || marketFilter === 'crypto') && fgStats && (
+              <button onClick={() => setActiveTab('analysis')} className="mb-4 w-full p-3 flex items-center justify-between transition-all"
+                style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, borderLeft: `3px solid ${getFGColor(fgStats.current)}` }}>
+                <div className="flex items-center gap-3">
+                  <div className="num-font text-lg font-bold" style={{ color: getFGColor(fgStats.current) }}>{fgStats.current}</div>
+                  <div>
+                    <div className="ui-font text-[10px] font-semibold" style={{ color: getFGColor(fgStats.current), letterSpacing: '0.1em', textTransform: 'uppercase' }}>{getFGLabel(fgStats.current)}</div>
+                    <div className="ui-font text-[9px]" style={{ color: COLORS.textDimmer }}>Korku &amp; Açgözlülük Endeksi</div>
                   </div>
                 </div>
-
-                {fearGreedError && !fgStats ? (
-                  <div className="p-4 ui-font text-xs flex items-center gap-2" style={{ color: COLORS.textDim }}>
-                    <AlertCircle size={12} />{fearGreedError} — <button onClick={fetchFearGreed} className="underline" style={{ color: COLORS.textBright }}>tekrar dene</button>
-                  </div>
-                ) : !fgStats ? (
-                  <div className="p-4 flex items-center justify-center gap-2 ui-font text-xs" style={{ color: COLORS.textDim }}>
-                    <div className="w-3 h-3 rounded-full spin" style={{ border: `1.5px solid ${COLORS.textDim}`, borderTopColor: COLORS.accent }} />yükleniyor...
-                  </div>
-                ) : (
-                  <>
-                    {/* Gauge + timeframes (side by side on desktop, stacked on mobile) */}
-                    <div className="p-4 flex flex-col sm:flex-row items-center gap-4">
-                      {/* Gauge */}
-                      <div className="flex-shrink-0 w-full sm:w-auto" style={{ maxWidth: 200 }}>
-                        <FearGreedGauge value={fgStats.current} />
-                      </div>
-
-                      {/* Timeframe cards */}
-                      <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-2 gap-2">
-                        {[
-                          { label: 'ANLIK', sublabel: 'bugün', val: fgStats.current },
-                          { label: 'KISA VADE', sublabel: '7 günlük ort.', val: fgStats.avg7 },
-                          { label: 'ORTA VADE', sublabel: '30 günlük ort.', val: fgStats.avg30 },
-                          { label: 'UZUN VADE', sublabel: '90 günlük ort.', val: fgStats.avg90 },
-                        ].map(({ label, sublabel, val }) => {
-                          const c = getFGColor(val);
-                          const lbl = getFGLabel(val);
-                          const pct = val;
-                          return (
-                            <div key={label} className="p-3 flex flex-col gap-1.5" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.border}`, borderTop: `2px solid ${c}` }}>
-                              <div className="ui-font text-[9px] font-semibold" style={{ color: COLORS.textDim, letterSpacing: '0.2em' }}>{label}</div>
-                              <div className="num-font text-2xl font-bold leading-none" style={{ color: c }}>{val}</div>
-                              <div className="ui-font text-[10px]" style={{ color: c, opacity: 0.85 }}>{lbl}</div>
-                              <div className="mt-1 h-1 rounded-full overflow-hidden" style={{ background: COLORS.border }}>
-                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: `linear-gradient(90deg, #FF4444 0%, #FFD700 50%, #22C55E 100%)`, backgroundSize: '300% 100%', backgroundPosition: `${100 - pct}% 0` }} />
-                              </div>
-                              <div className="ui-font text-[9px]" style={{ color: COLORS.textDimmer }}>{sublabel}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Mini bar chart + scale */}
-                    <div className="px-4 pb-4">
-                      <div className="ui-font text-[9px] mb-2 flex justify-between items-center" style={{ color: COLORS.textDimmer, letterSpacing: '0.15em' }}>
-                        <span>SON 90 GÜN</span>
-                        <span style={{ color: COLORS.textDimmer }}>alternative.me</span>
-                      </div>
-                      <FGMiniChart data={fgStats.history} />
-                      {/* Color scale legend */}
-                      <div className="mt-3 flex items-center gap-0.5">
-                        {[
-                          { label: 'Aş.Korku', color: '#FF4444', range: '0–24' },
-                          { label: 'Korku', color: '#FF8844', range: '25–44' },
-                          { label: 'Nötr', color: '#FFD700', range: '45–55' },
-                          { label: 'Açgöz.', color: '#7AE07A', range: '56–74' },
-                          { label: 'Aş.Açgöz.', color: '#22C55E', range: '75–100' },
-                        ].map(z => (
-                          <div key={z.label} className="flex-1 text-center py-1" style={{ background: `${z.color}18`, borderTop: `2px solid ${z.color}` }}>
-                            <div className="ui-font" style={{ fontSize: '8px', color: z.color, letterSpacing: '0.05em', lineHeight: 1.3 }}>{z.label}</div>
-                            <div className="num-font" style={{ fontSize: '8px', color: COLORS.textDimmer }}>{z.range}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
+                <div className="ui-font text-[10px] flex items-center gap-1" style={{ color: COLORS.textDim }}>Analiz <ArrowUpRight size={10} /></div>
+              </button>
             )}
 
             {/* DÜZENLEME MODU */}
@@ -1521,54 +1866,145 @@ export default function InvestmentPage({
 
       {/* ADD ASSET MODAL */}
       {showAddAssetModal && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6" style={{ background: 'rgba(0,0,0,0.9)' }} onClick={() => setShowAddAssetModal(false)}>
-          <div className="scale-in w-full max-w-md p-6 md:p-7" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6" style={{ background: 'rgba(0,0,0,0.9)' }} onClick={() => { setShowAddAssetModal(false); setStockSymbol(''); setStockName(''); setFundCode(''); setFundName(''); setSearchQuery(''); setSearchResults([]); }}>
+          <div className="scale-in w-full max-w-md p-6 md:p-7" style={{ background: COLORS.bgPanelLight, border: `1px solid ${COLORS.borderLight}`, maxHeight: '92vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-5">
               <div>
-                <div className="ui-font text-xs mb-1" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Coin Ekle</div>
+                <div className="ui-font text-xs mb-1" style={{ color: COLORS.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Enstrüman Ekle</div>
                 <h3 className="display-font text-xl" style={{ color: COLORS.textBrightest, fontWeight: 400 }}>Piyasaya <em style={{ color: COLORS.accent }}>ekle</em></h3>
               </div>
-              <button onClick={() => setShowAddAssetModal(false)} className="w-8 h-8 flex items-center justify-center" style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright }}>
+              <button onClick={() => { setShowAddAssetModal(false); setStockSymbol(''); setStockName(''); setFundCode(''); setFundName(''); setSearchQuery(''); setSearchResults([]); }} className="w-8 h-8 flex items-center justify-center" style={{ border: `1px solid ${COLORS.borderLight}`, color: COLORS.textBright }}>
                 <X size={14} />
               </button>
             </div>
 
-            <div className="relative mb-4">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: COLORS.textDim }} />
-              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="örn: avalanche, cardano, dogecoin..." autoFocus
-                className="ui-font w-full pl-10 p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBrightest, fontSize: '14px' }} />
+            {/* Tip seçici */}
+            <div className="grid grid-cols-3 gap-1 p-1 mb-5" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+              {[
+                { id: 'crypto', label: 'Kripto' },
+                { id: 'stock', label: 'Hisse' },
+                { id: 'fund', label: 'T. Fon' },
+              ].map(t => (
+                <button key={t.id} onClick={() => setAddAssetType(t.id)} className="ui-font py-2.5 transition-all"
+                  style={{ background: addAssetType === t.id ? COLORS.accent : 'transparent', color: addAssetType === t.id ? COLORS.bg : COLORS.textBright, fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  {t.label}
+                </button>
+              ))}
             </div>
 
-            {searching && <div className="text-center py-4 ui-font text-xs" style={{ color: COLORS.textDim }}>Aranıyor...</div>}
-
-            <div className="space-y-1.5 mb-4">
-              {searchResults.map(coin => {
-                const alreadyAdded = watchedAssets.some(a => a.id === coin.id) || DEFAULT_ASSETS.some(a => a.id === coin.id);
-                return (
-                  <button key={coin.id} onClick={() => !alreadyAdded && addCoinToWatchlist(coin)} disabled={alreadyAdded}
-                    className="w-full flex items-center gap-3 p-3 transition-all text-left"
-                    style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, opacity: alreadyAdded ? 0.5 : 1, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}>
-                    {coin.thumb && <img src={coin.thumb} alt="" className="w-7 h-7 flex-shrink-0" />}
-                    <div className="flex-1 min-w-0">
-                      <div className="ui-font text-sm" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{coin.name}</div>
-                      <div className="num-font text-xs" style={{ color: COLORS.textDim }}>
-                        {coin.symbol?.toUpperCase()} {coin.market_cap_rank ? `· #${coin.market_cap_rank}` : ''}
-                      </div>
-                    </div>
-                    {alreadyAdded ? (<span className="ui-font text-xs" style={{ color: COLORS.textDim }}>Ekli</span>) : (<Plus size={14} style={{ color: COLORS.accent }} />)}
-                  </button>
-                );
-              })}
-            </div>
-
-            {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
-              <div className="text-center py-6 ui-font text-xs" style={{ color: COLORS.textDim }}>"{searchQuery}" için sonuç yok</div>
+            {/* KRİPTO */}
+            {addAssetType === 'crypto' && (
+              <>
+                <div className="relative mb-4">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: COLORS.textDim }} />
+                  <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="örn: avalanche, cardano, dogecoin..." autoFocus
+                    className="ui-font w-full pl-10 p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBrightest, fontSize: '14px' }} />
+                </div>
+                {searching && <div className="text-center py-4 ui-font text-xs" style={{ color: COLORS.textDim }}>Aranıyor...</div>}
+                <div className="space-y-1.5 mb-4">
+                  {searchResults.map(coin => {
+                    const alreadyAdded = watchedAssets.some(a => a.id === coin.id) || DEFAULT_ASSETS.some(a => a.id === coin.id);
+                    return (
+                      <button key={coin.id} onClick={() => !alreadyAdded && addCoinToWatchlist(coin)} disabled={alreadyAdded}
+                        className="w-full flex items-center gap-3 p-3 transition-all text-left"
+                        style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, opacity: alreadyAdded ? 0.5 : 1, cursor: alreadyAdded ? 'not-allowed' : 'pointer' }}>
+                        {coin.thumb && <img src={coin.thumb} alt="" className="w-7 h-7 flex-shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <div className="ui-font text-sm" style={{ color: COLORS.textBrightest, fontWeight: 500 }}>{coin.name}</div>
+                          <div className="num-font text-xs" style={{ color: COLORS.textDim }}>{coin.symbol?.toUpperCase()} {coin.market_cap_rank ? `· #${coin.market_cap_rank}` : ''}</div>
+                        </div>
+                        {alreadyAdded ? <span className="ui-font text-xs" style={{ color: COLORS.textDim }}>Ekli</span> : <Plus size={14} style={{ color: COLORS.accent }} />}
+                      </button>
+                    );
+                  })}
+                </div>
+                {searchQuery.length >= 2 && !searching && searchResults.length === 0 && (
+                  <div className="text-center py-6 ui-font text-xs" style={{ color: COLORS.textDim }}>"{searchQuery}" için sonuç yok</div>
+                )}
+                {!searchQuery && (
+                  <div className="text-center py-6 ui-font text-xs" style={{ color: COLORS.textDim, lineHeight: 1.5 }}>
+                    Coin adı veya sembolü yaz<br/><span style={{ color: COLORS.textDimmer }}>10.000+ kripto destekleniyor</span>
+                  </div>
+                )}
+              </>
             )}
-            {!searchQuery && (
-              <div className="text-center py-6 ui-font text-xs" style={{ color: COLORS.textDim, lineHeight: 1.5 }}>
-                Coin adı veya sembolü yaz<br/>
-                <span style={{ color: COLORS.textDimmer }}>10.000+ kripto destekleniyor</span>
-              </div>
+
+            {/* HİSSE SENEDİ */}
+            {addAssetType === 'stock' && (
+              <>
+                <div className="grid grid-cols-2 gap-1 p-1 mb-4" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+                  {[{ id: 'bist', label: '📈 BIST (TR)' }, { id: 'nasdaq', label: '🇺🇸 ABD' }].map(m => (
+                    <button key={m.id} onClick={() => setStockMarket(m.id)} className="ui-font py-2 transition-all"
+                      style={{ background: stockMarket === m.id ? COLORS.accent : 'transparent', color: stockMarket === m.id ? COLORS.bg : COLORS.textBright, fontSize: '11px', fontWeight: 600, letterSpacing: '0.06em' }}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="mb-4">
+                  <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                    Sembol {stockMarket === 'bist' ? '(örn: SASA, TOGG, PGSUS)' : '(örn: AMD, PLTR, META)'}
+                  </label>
+                  <input type="text" value={stockSymbol} onChange={(e) => setStockSymbol(e.target.value.toUpperCase())} placeholder={stockMarket === 'bist' ? 'SASA' : 'NVDA'} autoFocus
+                    className="ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBrightest, fontSize: '18px', letterSpacing: '0.1em' }} />
+                  {stockMarket === 'bist' && stockSymbol && (
+                    <div className="ui-font text-[10px] mt-1" style={{ color: COLORS.textDimmer }}>Yahoo Finance: {stockSymbol}.IS</div>
+                  )}
+                </div>
+                <div className="mb-5">
+                  <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Şirket Adı <span style={{ textTransform: 'none', fontStyle: 'italic' }}>(opsiyonel)</span></label>
+                  <input type="text" value={stockName} onChange={(e) => setStockName(e.target.value)} placeholder="örn: Sasa Polyester"
+                    className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBright, fontSize: '14px' }} />
+                </div>
+                <button onClick={addStockToWatchlist} disabled={!stockSymbol.trim()} className="w-full ui-font py-3 transition-all"
+                  style={{ background: stockSymbol.trim() ? COLORS.accent : COLORS.border, color: stockSymbol.trim() ? COLORS.bg : COLORS.textDim, cursor: stockSymbol.trim() ? 'pointer' : 'not-allowed', letterSpacing: '0.15em', textTransform: 'uppercase', fontSize: '12px', fontWeight: 600 }}>
+                  {stockMarket === 'bist' ? 'BIST' : 'NASDAQ'} — Piyasaya Ekle
+                </button>
+                <div className="mt-3 ui-font text-[10px]" style={{ color: COLORS.textDimmer, lineHeight: 1.5 }}>
+                  Eklenen hisse Yahoo Finance API üzerinden anlık fiyat çeker. Piyasa saatleri dışında son kapanış fiyatı gösterilir.
+                </div>
+              </>
+            )}
+
+            {/* TÜRK YATIRIM FONU */}
+            {addAssetType === 'fund' && (
+              <>
+                <div className="mb-4">
+                  <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>TEFAS Fon Kodu <span style={{ textTransform: 'none', fontStyle: 'italic' }}>(3-4 harf)</span></label>
+                  <input type="text" value={fundCode} onChange={(e) => setFundCode(e.target.value.toUpperCase())} placeholder="örn: AGB, TI2, AFY" autoFocus
+                    className="ui-font w-full p-3 num-font" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBrightest, fontSize: '22px', letterSpacing: '0.15em' }} />
+                </div>
+                <div className="mb-4">
+                  <label className="ui-font text-xs block mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Fon Adı <span style={{ textTransform: 'none', fontStyle: 'italic' }}>(opsiyonel)</span></label>
+                  <input type="text" value={fundName} onChange={(e) => setFundName(e.target.value)} placeholder="örn: Ak Port. Altın BYF"
+                    className="ui-font w-full p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}`, color: COLORS.textBright, fontSize: '14px' }} />
+                </div>
+                <button onClick={addFundToWatchlist} disabled={!fundCode.trim()} className="w-full ui-font py-3 transition-all"
+                  style={{ background: fundCode.trim() ? COLORS.accent : COLORS.border, color: fundCode.trim() ? COLORS.bg : COLORS.textDim, cursor: fundCode.trim() ? 'pointer' : 'not-allowed', letterSpacing: '0.15em', textTransform: 'uppercase', fontSize: '12px', fontWeight: 600 }}>
+                  Türk Fonları — Piyasaya Ekle
+                </button>
+                <div className="mt-4 p-3" style={{ background: COLORS.bgPanel, border: `1px solid ${COLORS.border}` }}>
+                  <div className="ui-font text-[10px] mb-2" style={{ color: COLORS.textDim, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Örnek Fon Kodları</div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {[
+                      { code: 'AGB', name: 'Ak Port. Altın BYF' },
+                      { code: 'TI2', name: 'İş Port. Hisse' },
+                      { code: 'AFY', name: 'Ak Port. Yab. BYF' },
+                      { code: 'GAF', name: 'Garanti Port. His.' },
+                      { code: 'GIH', name: 'Garanti Port. Altın' },
+                      { code: 'YAP', name: 'Yapı Kredi Port.' },
+                    ].map(f => (
+                      <button key={f.code} onClick={() => { setFundCode(f.code); setFundName(f.name); }}
+                        className="p-2 text-left transition-all" style={{ background: fundCode === f.code ? 'rgba(122,224,122,0.08)' : COLORS.bgPanelLight, border: `1px solid ${fundCode === f.code ? COLORS.borderLight : COLORS.border}` }}>
+                        <div className="num-font text-xs font-bold" style={{ color: fundCode === f.code ? COLORS.accent : COLORS.textBright }}>{f.code}</div>
+                        <div className="ui-font text-[9px]" style={{ color: COLORS.textDimmer }}>{f.name}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ui-font text-[9px] mt-3" style={{ color: COLORS.textDimmer }}>
+                    Fon kodu tefas.gov.tr'den bulunabilir. Fiyatlar TEFAS API üzerinden çekilir.
+                  </div>
+                </div>
+              </>
             )}
           </div>
         </div>
